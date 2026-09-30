@@ -1,0 +1,84 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "Checks that the server is running.",
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/health/db": {
+            "get": {
+                "description": "Checks that the server can connect to PostgreSQL.",
+                "tags": [
+                    "health"
+                ],
+                "summary": "Database health check",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.Error": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "$ref": "#/definitions/dto.ErrorCode"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ErrorCode": {
+            "type": "string",
+            "enum": [
+                "invalid_request",
+                "unauthorized",
+                "not_found",
+                "conflict",
+                "payload_too_large",
+                "internal_error",
+                "unavailable"
+            ],
+            "x-enum-varnames": [
+                "ErrorCodeInvalidRequest",
+                "ErrorCodeUnauthorized",
+                "ErrorCodeNotFound",
+                "ErrorCodeConflict",
+                "ErrorCodePayloadTooLarge",
+                "ErrorCodeInternalError",
+                "ErrorCodeUnavailable"
+            ]
+        },
+        "dto.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/dto.Error"
+                }
+            }
+        }
+    }
+}
