@@ -1,0 +1,57 @@
+definitions:
+  dto.Error:
+    properties:
+      code:
+        $ref: '#/definitions/dto.ErrorCode'
+      message:
+        type: string
+    type: object
+  dto.ErrorCode:
+    enum:
+    - invalid_request
+    - unauthorized
+    - not_found
+    - conflict
+    - payload_too_large
+    - internal_error
+    - unavailable
+    type: string
+    x-enum-varnames:
+    - ErrorCodeInvalidRequest
+    - ErrorCodeUnauthorized
+    - ErrorCodeNotFound
+    - ErrorCodeConflict
+    - ErrorCodePayloadTooLarge
+    - ErrorCodeInternalError
+    - ErrorCodeUnavailable
+  dto.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/dto.Error'
+    type: object
+info:
+  contact: {}
+paths:
+  /health:
+    get:
+      description: Checks that the server is running.
+      responses:
+        "200":
+          description: OK
+      summary: Health check
+      tags:
+      - health
+  /health/db:
+    get:
+      description: Checks that the server can connect to PostgreSQL.
+      responses:
+        "200":
+          description: OK
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Database health check
+      tags:
+      - health
+swagger: "2.0"
