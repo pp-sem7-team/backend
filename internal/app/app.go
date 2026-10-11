@@ -26,7 +26,7 @@ func Run() error {
 
 	ctx := context.Background()
 
-	database, err := db.New(ctx, cfg.Postgres, log)
+	database, err := db.NewDB(ctx, cfg.Postgres, log)
 	if err != nil {
 		return err
 	}
