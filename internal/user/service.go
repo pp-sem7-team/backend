@@ -37,10 +37,11 @@ func NewService(q Querier, log *slog.Logger) *Service {
 func (s *Service) GetMe(ctx context.Context, userID uuid.UUID) (User, error) {
 	row, err := s.q.GetUser(ctx, userID)
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			s.log.Error("failed to get user", "user_id", userID, "error", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return User{}, ErrUserNotFound
 		}
 
+		s.log.Error("failed to get user", "user_id", userID, "error", err)
 		return User{}, err
 	}
 
@@ -60,10 +61,11 @@ func (s *Service) ChangePassword(
 ) error {
 	passwordHash, err := s.q.GetUserPasswordHash(ctx, userID)
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			s.log.Error("failed to get user password hash", "user_id", userID, "error", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrUserNotFound
 		}
 
+		s.log.Error("failed to get user password hash", "user_id", userID, "error", err)
 		return err
 	}
 

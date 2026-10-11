@@ -25,6 +25,7 @@ func NewHandler(service *Service) *Handler {
 // @Produce json
 // @Success 200 {object} UserResponse
 // @Failure 401 {object} httpx.ErrorResponse
+// @Failure 404 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /users/me [get]
 func (h *Handler) GetMe(c *gin.Context) {
@@ -41,6 +42,16 @@ func (h *Handler) GetMe(c *gin.Context) {
 
 	user, err := h.service.GetMe(c.Request.Context(), userID)
 	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			httpx.WriteError(
+				c,
+				http.StatusNotFound,
+				httpx.ErrorCodeNotFound,
+				"User not found",
+			)
+			return
+		}
+
 		httpx.WriteError(
 			c,
 			http.StatusInternalServerError,
@@ -69,6 +80,7 @@ func (h *Handler) GetMe(c *gin.Context) {
 // @Success 204
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
+// @Failure 404 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /users/me/password [patch]
 func (h *Handler) ChangePassword(c *gin.Context) {
@@ -101,6 +113,15 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		req.NewPassword,
 	)
 	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			httpx.WriteError(
+				c,
+				http.StatusNotFound,
+				httpx.ErrorCodeNotFound,
+				"User not found",
+			)
+			return
+		}
 		if errors.Is(err, ErrInvalidPassword) {
 			httpx.WriteError(
 				c,
