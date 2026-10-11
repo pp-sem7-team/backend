@@ -10,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/pp-sem7-team/backend/internal/auth"
 	"github.com/pp-sem7-team/backend/internal/config"
 	"github.com/pp-sem7-team/backend/internal/db"
 	"github.com/pp-sem7-team/backend/internal/logger"
@@ -32,7 +33,12 @@ func Run() error {
 	}
 	defer database.Close()
 
-	router := NewRouter(database, log)
+	tokenManager, err := auth.NewJWTTokenManager(cfg.Auth.JWTSecret)
+	if err != nil {
+		return err
+	}
+
+	router := NewRouter(database, tokenManager, log)
 
 	server := &http.Server{
 		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,
