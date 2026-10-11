@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Postgres PostgresConfig
+	Auth     AuthConfig
 	Logging  LoggingConfig
 }
 
@@ -23,6 +24,10 @@ type PostgresConfig struct {
 	Name     string
 	User     string
 	Password string
+}
+
+type AuthConfig struct {
+	JWTSecret string
 }
 
 type LoggingConfig struct {
@@ -44,11 +49,16 @@ func Load() Config {
 			Password: getEnv("POSTGRES_PASSWORD", "postgres"),
 		},
 
+		Auth: AuthConfig{
+			JWTSecret: os.Getenv("JWT_SECRET"),
+		},
+
 		Logging: LoggingConfig{
 			Level: getEnvLogLevel("LOG_LEVEL", slog.LevelInfo),
 		},
 	}
 }
+
 func getEnv(key, def string) string {
 	value := os.Getenv(key)
 	if value == "" {
