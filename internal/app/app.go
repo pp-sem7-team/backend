@@ -39,7 +39,7 @@ func Run() error {
 	cleanupCtx, stopCleanup := context.WithCancel(context.Background())
 	defer stopCleanup()
 
-	go cleanup.RefreshTokens(cleanupCtx, querier)
+	go cleanup.RefreshTokens(cleanupCtx, querier, log)
 
 	tokenManager, err := auth.NewJWTTokenManager(cfg.Auth.JWTSecret)
 	if err != nil {

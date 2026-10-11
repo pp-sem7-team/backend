@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,12 +37,14 @@ type TokenManager interface {
 type Service struct {
 	q            Querier
 	tokenManager TokenManager
+	log          *slog.Logger
 }
 
-func NewService(q Querier, tokens TokenManager) *Service {
+func NewService(q Querier, tokens TokenManager, log *slog.Logger) *Service {
 	return &Service{
 		q:            q,
 		tokenManager: tokens,
+		log:          log,
 	}
 }
 
@@ -52,6 +55,7 @@ func (s *Service) Register(
 ) (TokenPair, error) {
 	passwordHash, err := security.HashPassword(password)
 	if err != nil {
+		s.log.Error("failed to hash password", "error", err)
 		return TokenPair{}, err
 	}
 
@@ -70,6 +74,7 @@ func (s *Service) Register(
 			return TokenPair{}, ErrEmailAlreadyExists
 		}
 
+		s.log.Error("failed to create user", "error", err)
 		return TokenPair{}, err
 	}
 
@@ -87,6 +92,7 @@ func (s *Service) Login(
 			return TokenPair{}, ErrInvalidCredentials
 		}
 
+		s.log.Error("failed to get user credentials", "error", err)
 		return TokenPair{}, err
 	}
 
@@ -96,6 +102,7 @@ func (s *Service) Login(
 			return TokenPair{}, ErrInvalidCredentials
 		}
 
+		s.log.Error("failed to check password", "error", err)
 		return TokenPair{}, err
 	}
 
@@ -114,16 +121,19 @@ func (s *Service) Refresh(
 			return TokenPair{}, ErrInvalidRefreshToken
 		}
 
+		s.log.Error("failed to get user by refresh token", "error", err)
 		return TokenPair{}, err
 	}
 
 	accessToken, err := s.tokenManager.GenerateAccessToken(userID)
 	if err != nil {
+		s.log.Error("failed to generate access token", "user_id", userID, "error", err)
 		return TokenPair{}, err
 	}
 
 	newRefreshToken, err := s.tokenManager.GenerateRefreshToken()
 	if err != nil {
+		s.log.Error("failed to generate refresh token", "user_id", userID, "error", err)
 		return TokenPair{}, err
 	}
 
@@ -135,6 +145,7 @@ func (s *Service) Refresh(
 		ExpiresAt:    time.Now().Add(refreshTokenTTL),
 	})
 	if err != nil {
+		s.log.Error("failed to rotate refresh token", "user_id", userID, "error", err)
 		return TokenPair{}, err
 	}
 
@@ -151,7 +162,12 @@ func (s *Service) Refresh(
 func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	tokenHash := s.tokenManager.HashRefreshToken(refreshToken)
 
-	return s.q.DeleteRefreshTokenByHash(ctx, tokenHash)
+	if err := s.q.DeleteRefreshTokenByHash(ctx, tokenHash); err != nil {
+		s.log.Error("failed to delete refresh token", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 func (s *Service) issueTokens(
@@ -160,11 +176,13 @@ func (s *Service) issueTokens(
 ) (TokenPair, error) {
 	accessToken, err := s.tokenManager.GenerateAccessToken(userID)
 	if err != nil {
+		s.log.Error("failed to generate access token", "user_id", userID, "error", err)
 		return TokenPair{}, err
 	}
 
 	refreshToken, err := s.tokenManager.GenerateRefreshToken()
 	if err != nil {
+		s.log.Error("failed to generate refresh token", "user_id", userID, "error", err)
 		return TokenPair{}, err
 	}
 
@@ -175,6 +193,7 @@ func (s *Service) issueTokens(
 		ExpiresAt: time.Now().Add(refreshTokenTTL),
 	})
 	if err != nil {
+		s.log.Error("failed to save refresh token", "user_id", userID, "error", err)
 		return TokenPair{}, err
 	}
 

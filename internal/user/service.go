@@ -3,8 +3,10 @@ package user
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/pp-sem7-team/backend/internal/db"
 	"github.com/pp-sem7-team/backend/internal/security"
 )
@@ -21,18 +23,24 @@ type Querier interface {
 }
 
 type Service struct {
-	q Querier
+	q   Querier
+	log *slog.Logger
 }
 
-func NewService(q Querier) *Service {
+func NewService(q Querier, log *slog.Logger) *Service {
 	return &Service{
-		q: q,
+		q:   q,
+		log: log,
 	}
 }
 
 func (s *Service) GetMe(ctx context.Context, userID uuid.UUID) (User, error) {
 	row, err := s.q.GetUser(ctx, userID)
 	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			s.log.Error("failed to get user", "user_id", userID, "error", err)
+		}
+
 		return User{}, err
 	}
 
@@ -52,6 +60,10 @@ func (s *Service) ChangePassword(
 ) error {
 	passwordHash, err := s.q.GetUserPasswordHash(ctx, userID)
 	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			s.log.Error("failed to get user password hash", "user_id", userID, "error", err)
+		}
+
 		return err
 	}
 
@@ -61,11 +73,13 @@ func (s *Service) ChangePassword(
 			return ErrInvalidPassword
 		}
 
+		s.log.Error("failed to check current password", "user_id", userID, "error", err)
 		return err
 	}
 
 	newPasswordHash, err := security.HashPassword(newPassword)
 	if err != nil {
+		s.log.Error("failed to hash new password", "user_id", userID, "error", err)
 		return err
 	}
 
@@ -74,6 +88,7 @@ func (s *Service) ChangePassword(
 		PasswordHash: newPasswordHash,
 	})
 	if err != nil {
+		s.log.Error("failed to update user password", "user_id", userID, "error", err)
 		return err
 	}
 

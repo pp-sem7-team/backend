@@ -29,10 +29,10 @@ func NewRouter(
 
 	healthHandler := health.NewHealthHandler(database)
 
-	authService := auth.NewService(querier, tokenManager)
+	authService := auth.NewService(querier, tokenManager, log.With("module", "auth"))
 	authHandler := auth.NewHandler(authService)
 
-	userService := user.NewService(querier)
+	userService := user.NewService(querier, log.With("module", "user"))
 	userHandler := user.NewHandler(userService)
 
 	router.GET("/health", healthHandler.Health)
