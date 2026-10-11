@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const refreshTokensCleanupInterval = time.Minute
+const refreshTokensCleanupInterval = time.Hour
 
 type Querier interface {
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
