@@ -19,12 +19,11 @@ import (
 
 func NewRouter(
 	database *db.DB,
+	querier *db.Queries,
 	tokenManager *auth.JWTTokenManager,
 	log *slog.Logger,
 ) http.Handler {
 	router := gin.New()
-
-	querier := db.New(database.Pool)
 
 	router.Use(middleware.Logging(log))
 

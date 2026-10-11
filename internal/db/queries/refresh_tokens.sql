@@ -28,3 +28,7 @@ WHERE token_hash = sqlc.arg(old_token_hash)
 -- name: DeleteRefreshTokenByHash :exec
 DELETE FROM refresh_tokens
 WHERE token_hash = sqlc.arg(token_hash);
+
+-- name: DeleteExpiredRefreshTokens :execrows
+DELETE FROM refresh_tokens
+WHERE expires_at <= now();

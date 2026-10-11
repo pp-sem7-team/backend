@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
+	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	GetUser(ctx context.Context, userID uuid.UUID) (GetUserRow, error)
 	GetUserCredentialsByEmail(ctx context.Context, email string) (GetUserCredentialsByEmailRow, error)
