@@ -1,11 +1,11 @@
-package handler
+package health
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pp-sem7-team/backend/internal/db"
-	"github.com/pp-sem7-team/backend/internal/dto"
+	"github.com/pp-sem7-team/backend/internal/httpx"
 )
 
 type HealthHandler struct {
@@ -33,14 +33,14 @@ func (h *HealthHandler) Health(c *gin.Context) {
 // @Description Checks that the server can connect to PostgreSQL.
 // @Tags health
 // @Success 200
-// @Failure 503 {object} dto.ErrorResponse
+// @Failure 503 {object} httpx.ErrorResponse
 // @Router /health/db [get]
 func (h *HealthHandler) HealthDB(c *gin.Context) {
 	if err := h.db.Ping(c.Request.Context()); err != nil {
-		WriteError(
+		httpx.WriteError(
 			c,
 			http.StatusServiceUnavailable,
-			dto.ErrorCodeUnavailable,
+			httpx.ErrorCodeUnavailable,
 			"database is unavailable",
 		)
 		return

@@ -1,4 +1,6 @@
-package dto
+package httpx
+
+import "github.com/gin-gonic/gin"
 
 type ErrorCode string
 
@@ -19,4 +21,18 @@ type ErrorResponse struct {
 type Error struct {
 	Code    ErrorCode `json:"code"`
 	Message string    `json:"message"`
+}
+
+func WriteError(
+	c *gin.Context,
+	status int,
+	code ErrorCode,
+	message string,
+) {
+	c.JSON(status, ErrorResponse{
+		Error: Error{
+			Code:    code,
+			Message: message,
+		},
+	})
 }

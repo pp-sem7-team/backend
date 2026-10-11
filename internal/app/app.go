@@ -10,6 +10,8 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/pp-sem7-team/backend/internal/auth"
+	"github.com/pp-sem7-team/backend/internal/cleanup"
 	"github.com/pp-sem7-team/backend/internal/config"
 	"github.com/pp-sem7-team/backend/internal/db"
 	"github.com/pp-sem7-team/backend/internal/logger"
@@ -26,13 +28,25 @@ func Run() error {
 
 	ctx := context.Background()
 
-	database, err := db.New(ctx, cfg.Postgres, log)
+	database, err := db.NewDB(ctx, cfg.Postgres, log)
 	if err != nil {
 		return err
 	}
 	defer database.Close()
 
-	router := NewRouter(database, log)
+	querier := db.New(database.Pool)
+
+	cleanupCtx, stopCleanup := context.WithCancel(context.Background())
+	defer stopCleanup()
+
+	go cleanup.RefreshTokens(cleanupCtx, querier, log)
+
+	tokenManager, err := auth.NewJWTTokenManager(cfg.Auth.JWTSecret)
+	if err != nil {
+		return err
+	}
+
+	router := NewRouter(database, querier, tokenManager, log)
 
 	server := &http.Server{
 		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,
