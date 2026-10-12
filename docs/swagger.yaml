@@ -26,6 +26,67 @@ definitions:
       refresh_token:
         type: string
     type: object
+  branch.BranchListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/branch.BranchResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  branch.BranchResponse:
+    properties:
+      created_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: feature/user-search
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/branch.BranchStatus'
+        example: active
+      updated_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+      workspace_id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+    type: object
+  branch.BranchStatus:
+    enum:
+    - active
+    - closed
+    type: string
+    x-enum-varnames:
+    - BranchStatusActive
+    - BranchStatusClosed
+  branch.CreateBranchRequest:
+    properties:
+      name:
+        example: feature/user-search
+        type: string
+    required:
+    - name
+    type: object
+  branch.UpdateBranchRequest:
+    properties:
+      name:
+        example: feature/user-search
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/branch.BranchStatus'
+        example: closed
+    type: object
   httpx.Error:
     properties:
       code:
@@ -78,6 +139,53 @@ definitions:
         type: string
       id:
         example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      updated_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+    type: object
+  workspace.CreateWorkspaceRequest:
+    properties:
+      name:
+        example: My project
+        type: string
+    required:
+    - name
+    type: object
+  workspace.RenameWorkspaceRequest:
+    properties:
+      name:
+        example: New project name
+        type: string
+    required:
+    - name
+    type: object
+  workspace.WorkspaceListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/workspace.WorkspaceResponse'
+        type: array
+      limit:
+        example: 10
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      total:
+        example: 25
+        type: integer
+    type: object
+  workspace.WorkspaceResponse:
+    properties:
+      created_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: My project
         type: string
       updated_at:
         example: "2026-01-01T12:00:00Z"
@@ -214,6 +322,123 @@ paths:
       summary: Register user
       tags:
       - auth
+  /branches/{branch_id}:
+    delete:
+      description: Deletes a branch and its related data.
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete branch
+      tags:
+      - branches
+    get:
+      description: Returns a branch owned by the authenticated user.
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/branch.BranchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get branch
+      tags:
+      - branches
+    patch:
+      consumes:
+      - application/json
+      description: Updates a branch owned by the authenticated user.
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      - description: Branch fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/branch.UpdateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/branch.BranchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update branch
+      tags:
+      - branches
   /health:
     get:
       description: Checks that the server is running.
@@ -301,6 +526,308 @@ paths:
       summary: Change current user's password
       tags:
       - users
+  /workspaces:
+    get:
+      description: Returns the workspaces of the authenticated user.
+      parameters:
+      - default: 0
+        description: Number of items to skip
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      - default: 10
+        description: Maximum number of items
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workspace.WorkspaceListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List workspaces
+      tags:
+      - workspaces
+    post:
+      consumes:
+      - application/json
+      description: Creates a workspace for the authenticated user.
+      parameters:
+      - description: Workspace data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/workspace.CreateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/workspace.WorkspaceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create workspace
+      tags:
+      - workspaces
+  /workspaces/{workspace_id}:
+    delete:
+      description: Deletes a workspace and its related data.
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspace_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete workspace
+      tags:
+      - workspaces
+    get:
+      description: Returns a workspace owned by the authenticated user.
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspace_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workspace.WorkspaceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get workspace
+      tags:
+      - workspaces
+    patch:
+      consumes:
+      - application/json
+      description: Renames a workspace owned by the authenticated user.
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspace_id
+        required: true
+        type: string
+      - description: New workspace name
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/workspace.RenameWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/workspace.WorkspaceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rename workspace
+      tags:
+      - workspaces
+  /workspaces/{workspace_id}/branches:
+    get:
+      description: Returns branches in a workspace owned by the authenticated user.
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspace_id
+        required: true
+        type: string
+      - default: 0
+        description: Number of items to skip
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      - default: 10
+        description: Maximum number of items
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Branch status
+        enum:
+        - active
+        - closed
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/branch.BranchListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List branches
+      tags:
+      - branches
+    post:
+      consumes:
+      - application/json
+      description: Creates a branch in a workspace owned by the authenticated user.
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspace_id
+        required: true
+        type: string
+      - description: Branch data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/branch.CreateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/branch.BranchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create branch
+      tags:
+      - branches
 securityDefinitions:
   BearerAuth:
     in: header

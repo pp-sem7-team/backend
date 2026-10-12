@@ -177,8 +177,8 @@ type Commit struct {
 	ID             uuid.UUID        `json:"id"`
 	ChangeID       uuid.UUID        `json:"change_id"`
 	Type           NullCommitType   `json:"type"`
-	Scope          pgtype.Text      `json:"scope"`
-	Message        pgtype.Text      `json:"message"`
+	Scope          *string          `json:"scope"`
+	Message        *string          `json:"message"`
 	IsEditedByUser bool             `json:"is_edited_by_user"`
 	Status         GenerationStatus `json:"status"`
 	CreatedAt      time.Time        `json:"created_at"`
@@ -198,8 +198,8 @@ type Outbox struct {
 type PullRequest struct {
 	ID             uuid.UUID        `json:"id"`
 	BranchID       uuid.UUID        `json:"branch_id"`
-	Title          pgtype.Text      `json:"title"`
-	Description    pgtype.Text      `json:"description"`
+	Title          *string          `json:"title"`
+	Description    *string          `json:"description"`
 	IsEditedByUser bool             `json:"is_edited_by_user"`
 	Status         GenerationStatus `json:"status"`
 	CreatedAt      time.Time        `json:"created_at"`
