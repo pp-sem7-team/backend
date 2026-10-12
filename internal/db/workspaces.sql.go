@@ -211,3 +211,24 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 	)
 	return i, err
 }
+
+const workspaceExists = `-- name: WorkspaceExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM workspaces
+    WHERE id = $1
+      AND user_id = $2
+)
+`
+
+type WorkspaceExistsParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) WorkspaceExists(ctx context.Context, arg WorkspaceExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, workspaceExists, arg.ID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}

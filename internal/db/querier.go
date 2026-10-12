@@ -11,22 +11,29 @@ import (
 )
 
 type Querier interface {
+	CountBranches(ctx context.Context, arg CountBranchesParams) (int64, error)
 	CountWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error)
+	CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (CreateWorkspaceRow, error)
+	DeleteBranch(ctx context.Context, arg DeleteBranchParams) (int64, error)
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
+	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (GetUserRow, error)
 	GetUserCredentialsByEmail(ctx context.Context, email string) (GetUserCredentialsByEmailRow, error)
 	GetUserIDByRefreshTokenHash(ctx context.Context, tokenHash string) (uuid.UUID, error)
 	GetUserPasswordHash(ctx context.Context, userID uuid.UUID) (string, error)
 	GetWorkspace(ctx context.Context, arg GetWorkspaceParams) (GetWorkspaceRow, error)
+	ListBranches(ctx context.Context, arg ListBranchesParams) ([]Branch, error)
 	ListWorkspaces(ctx context.Context, arg ListWorkspacesParams) ([]ListWorkspacesRow, error)
 	RotateRefreshToken(ctx context.Context, arg RotateRefreshTokenParams) (int64, error)
+	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error)
 	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (UpdateWorkspaceRow, error)
+	WorkspaceExists(ctx context.Context, arg WorkspaceExistsParams) (bool, error)
 }
 
 var _ Querier = (*Queries)(nil)

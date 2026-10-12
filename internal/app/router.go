@@ -11,6 +11,7 @@ import (
 	_ "github.com/pp-sem7-team/backend/docs"
 
 	"github.com/pp-sem7-team/backend/internal/auth"
+	"github.com/pp-sem7-team/backend/internal/branch"
 	"github.com/pp-sem7-team/backend/internal/db"
 	"github.com/pp-sem7-team/backend/internal/health"
 	"github.com/pp-sem7-team/backend/internal/middleware"
@@ -39,6 +40,9 @@ func NewRouter(
 	workspaceService := workspace.NewService(querier, log.With("module", "workspace"))
 	workspaceHandler := workspace.NewHandler(workspaceService)
 
+	branchService := branch.NewService(querier, log.With("module", "branch"))
+	branchHandler := branch.NewHandler(branchService)
+
 	router.GET("/health", healthHandler.Health)
 	router.GET("/health/db", healthHandler.HealthDB)
 
@@ -65,6 +69,16 @@ func NewRouter(
 		workspaces.GET("/:workspace_id", workspaceHandler.Get)
 		workspaces.PATCH("/:workspace_id", workspaceHandler.Rename)
 		workspaces.DELETE("/:workspace_id", workspaceHandler.Delete)
+	}
+
+	branches := router.Group("")
+	branches.Use(middleware.Auth(tokenManager))
+	{
+		branches.POST("/workspaces/:workspace_id/branches", branchHandler.Create)
+		branches.GET("/workspaces/:workspace_id/branches", branchHandler.List)
+		branches.GET("/branches/:branch_id", branchHandler.Get)
+		branches.PATCH("/branches/:branch_id", branchHandler.Update)
+		branches.DELETE("/branches/:branch_id", branchHandler.Delete)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

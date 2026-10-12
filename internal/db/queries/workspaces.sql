@@ -25,6 +25,14 @@ FROM workspaces
 WHERE id = sqlc.arg(id)
   AND user_id = sqlc.arg(user_id);
 
+-- name: WorkspaceExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM workspaces
+    WHERE id = sqlc.arg(id)
+      AND user_id = sqlc.arg(user_id)
+);
+
 -- name: ListWorkspaces :many
 SELECT
     id,

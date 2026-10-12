@@ -25,3 +25,11 @@ sql:
             go_type:
               import: "time"
               type: "Time"
+          - db_type: "text"
+            nullable: true
+            go_type:
+              type: "*string"
+          - db_type: "branch_status"
+            nullable: true
+            go_type:
+              type: "*BranchStatus"
