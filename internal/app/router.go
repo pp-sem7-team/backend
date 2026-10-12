@@ -15,6 +15,7 @@ import (
 	"github.com/pp-sem7-team/backend/internal/health"
 	"github.com/pp-sem7-team/backend/internal/middleware"
 	"github.com/pp-sem7-team/backend/internal/user"
+	"github.com/pp-sem7-team/backend/internal/workspace"
 )
 
 func NewRouter(
@@ -35,6 +36,9 @@ func NewRouter(
 	userService := user.NewService(querier, log.With("module", "user"))
 	userHandler := user.NewHandler(userService)
 
+	workspaceService := workspace.NewService(querier, log.With("module", "workspace"))
+	workspaceHandler := workspace.NewHandler(workspaceService)
+
 	router.GET("/health", healthHandler.Health)
 	router.GET("/health/db", healthHandler.HealthDB)
 
@@ -51,6 +55,16 @@ func NewRouter(
 	{
 		users.GET("/me", userHandler.GetMe)
 		users.PATCH("/me/password", userHandler.ChangePassword)
+	}
+
+	workspaces := router.Group("/workspaces")
+	workspaces.Use(middleware.Auth(tokenManager))
+	{
+		workspaces.POST("", workspaceHandler.Create)
+		workspaces.GET("", workspaceHandler.List)
+		workspaces.GET("/:workspace_id", workspaceHandler.Get)
+		workspaces.PATCH("/:workspace_id", workspaceHandler.Rename)
+		workspaces.DELETE("/:workspace_id", workspaceHandler.Delete)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

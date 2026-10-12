@@ -11,16 +11,22 @@ import (
 )
 
 type Querier interface {
+	CountWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
+	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (CreateWorkspaceRow, error)
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
+	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (GetUserRow, error)
 	GetUserCredentialsByEmail(ctx context.Context, email string) (GetUserCredentialsByEmailRow, error)
 	GetUserIDByRefreshTokenHash(ctx context.Context, tokenHash string) (uuid.UUID, error)
 	GetUserPasswordHash(ctx context.Context, userID uuid.UUID) (string, error)
+	GetWorkspace(ctx context.Context, arg GetWorkspaceParams) (GetWorkspaceRow, error)
+	ListWorkspaces(ctx context.Context, arg ListWorkspacesParams) ([]ListWorkspacesRow, error)
 	RotateRefreshToken(ctx context.Context, arg RotateRefreshTokenParams) (int64, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error)
+	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (UpdateWorkspaceRow, error)
 }
 
 var _ Querier = (*Queries)(nil)
