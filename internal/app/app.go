@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/pp-sem7-team/backend/internal/auth"
+	"github.com/pp-sem7-team/backend/internal/broker"
 	"github.com/pp-sem7-team/backend/internal/cleanup"
 	"github.com/pp-sem7-team/backend/internal/config"
 	"github.com/pp-sem7-team/backend/internal/db"
@@ -33,6 +34,12 @@ func Run() error {
 		return err
 	}
 	defer database.Close()
+
+	brokerClient, err := broker.NewClient(cfg.RabbitMQ, log)
+	if err != nil {
+		return err
+	}
+	defer brokerClient.Close()
 
 	querier := db.New(database.Pool)
 
