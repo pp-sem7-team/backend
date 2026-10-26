@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Postgres PostgresConfig
+	RabbitMQ RabbitMQConfig
 	Auth     AuthConfig
 	Logging  LoggingConfig
 }
@@ -28,6 +29,14 @@ type PostgresConfig struct {
 
 type AuthConfig struct {
 	JWTSecret string
+}
+
+type RabbitMQConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Vhost    string
 }
 
 type LoggingConfig struct {
@@ -51,6 +60,14 @@ func Load() Config {
 
 		Auth: AuthConfig{
 			JWTSecret: os.Getenv("JWT_SECRET"),
+		},
+
+		RabbitMQ: RabbitMQConfig{
+			Host:     getEnv("RABBITMQ_HOST", "localhost"),
+			Port:     getEnv("RABBITMQ_PORT", "5672"),
+			User:     getEnv("RABBITMQ_USER", ""),
+			Password: getEnv("RABBITMQ_PASSWORD", ""),
+			Vhost:    getEnv("RABBITMQ_VHOST", "/"),
 		},
 
 		Logging: LoggingConfig{
