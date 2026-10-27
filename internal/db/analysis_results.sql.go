@@ -11,6 +11,43 @@ import (
 	"github.com/google/uuid"
 )
 
+const applyAnalysisResult = `-- name: ApplyAnalysisResult :execrows
+UPDATE analysis_results ar
+SET
+    structured_changes = $1::jsonb,
+    status = $2::generation_status,
+    updated_at = now()
+WHERE ar.id = $3
+  AND ar.status = 'pending'
+  AND EXISTS (
+      SELECT 1
+      FROM outbox o
+      WHERE o.id = $4
+        AND o.message_type = 'analysis.request'
+        AND o.resource_id = ar.id
+  )
+`
+
+type ApplyAnalysisResultParams struct {
+	StructuredChanges []byte           `json:"structured_changes"`
+	Status            GenerationStatus `json:"status"`
+	AnalysisID        uuid.UUID        `json:"analysis_id"`
+	MessageID         uuid.UUID        `json:"message_id"`
+}
+
+func (q *Queries) ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (int64, error) {
+	result, err := q.db.Exec(ctx, applyAnalysisResult,
+		arg.StructuredChanges,
+		arg.Status,
+		arg.AnalysisID,
+		arg.MessageID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const createAnalysisResult = `-- name: CreateAnalysisResult :exec
 INSERT INTO analysis_results (
     id,
@@ -34,38 +71,19 @@ func (q *Queries) CreateAnalysisResult(ctx context.Context, arg CreateAnalysisRe
 	return err
 }
 
-const updateAnalysisResult = `-- name: UpdateAnalysisResult :one
+const failStalePendingAnalyses = `-- name: FailStalePendingAnalyses :execrows
 UPDATE analysis_results
 SET
-    structured_changes = $1::jsonb,
-    status = $2::generation_status,
+    status = 'failed',
     updated_at = now()
-WHERE id = $3
-RETURNING
-    id,
-    change_id,
-    structured_changes,
-    status,
-    created_at,
-    updated_at
+WHERE status = 'pending'
+  AND created_at < now() - ($1::int * interval '1 second')
 `
 
-type UpdateAnalysisResultParams struct {
-	StructuredChanges []byte           `json:"structured_changes"`
-	Status            GenerationStatus `json:"status"`
-	ID                uuid.UUID        `json:"id"`
-}
-
-func (q *Queries) UpdateAnalysisResult(ctx context.Context, arg UpdateAnalysisResultParams) (AnalysisResult, error) {
-	row := q.db.QueryRow(ctx, updateAnalysisResult, arg.StructuredChanges, arg.Status, arg.ID)
-	var i AnalysisResult
-	err := row.Scan(
-		&i.ID,
-		&i.ChangeID,
-		&i.StructuredChanges,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+func (q *Queries) FailStalePendingAnalyses(ctx context.Context, timeoutSeconds int32) (int64, error) {
+	result, err := q.db.Exec(ctx, failStalePendingAnalyses, timeoutSeconds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

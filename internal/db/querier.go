@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (int64, error)
 	CountBranches(ctx context.Context, arg CountBranchesParams) (int64, error)
 	CountChangesByBranch(ctx context.Context, arg CountChangesByBranchParams) (int64, error)
 	CountWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error)
@@ -25,6 +26,7 @@ type Querier interface {
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
+	FailStalePendingAnalyses(ctx context.Context, timeoutSeconds int32) (int64, error)
 	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
 	GetChange(ctx context.Context, arg GetChangeParams) (GetChangeRow, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (GetUserRow, error)
@@ -39,7 +41,6 @@ type Querier interface {
 	LockBranchForChange(ctx context.Context, arg LockBranchForChangeParams) (LockBranchForChangeRow, error)
 	MarkOutboxMessagePublished(ctx context.Context, id uuid.UUID) error
 	RotateRefreshToken(ctx context.Context, arg RotateRefreshTokenParams) (int64, error)
-	UpdateAnalysisResult(ctx context.Context, arg UpdateAnalysisResultParams) (AnalysisResult, error)
 	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error)
 	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (UpdateWorkspaceRow, error)

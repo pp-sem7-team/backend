@@ -187,12 +187,11 @@ type Commit struct {
 
 type Outbox struct {
 	ID          uuid.UUID          `json:"id"`
-	Exchange    string             `json:"exchange"`
-	RoutingKey  string             `json:"routing_key"`
-	Headers     json.RawMessage    `json:"headers"`
 	Payload     json.RawMessage    `json:"payload"`
 	CreatedAt   time.Time          `json:"created_at"`
 	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	MessageType string             `json:"message_type"`
+	ResourceID  uuid.UUID          `json:"resource_id"`
 }
 
 type PullRequest struct {

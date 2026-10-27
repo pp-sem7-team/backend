@@ -1,24 +1,21 @@
 -- name: CreateOutboxMessage :exec
 INSERT INTO outbox (
     id,
-    exchange,
-    routing_key,
-    headers,
+    message_type,
+    resource_id,
     payload
 )
 VALUES (
     sqlc.arg(id),
-    sqlc.arg(exchange),
-    sqlc.arg(routing_key),
-    sqlc.arg(headers),
+    sqlc.arg(message_type),
+    sqlc.arg(resource_id),
     sqlc.arg(payload)
 );
 
 -- name: ListUnpublishedOutboxMessages :many
 SELECT
     id,
-    exchange,
-    routing_key,
+    message_type,
     payload
 FROM outbox
 WHERE published_at IS NULL

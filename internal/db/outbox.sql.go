@@ -15,34 +15,30 @@ import (
 const createOutboxMessage = `-- name: CreateOutboxMessage :exec
 INSERT INTO outbox (
     id,
-    exchange,
-    routing_key,
-    headers,
+    message_type,
+    resource_id,
     payload
 )
 VALUES (
     $1,
     $2,
     $3,
-    $4,
-    $5
+    $4
 )
 `
 
 type CreateOutboxMessageParams struct {
-	ID         uuid.UUID       `json:"id"`
-	Exchange   string          `json:"exchange"`
-	RoutingKey string          `json:"routing_key"`
-	Headers    json.RawMessage `json:"headers"`
-	Payload    json.RawMessage `json:"payload"`
+	ID          uuid.UUID       `json:"id"`
+	MessageType string          `json:"message_type"`
+	ResourceID  uuid.UUID       `json:"resource_id"`
+	Payload     json.RawMessage `json:"payload"`
 }
 
 func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessageParams) error {
 	_, err := q.db.Exec(ctx, createOutboxMessage,
 		arg.ID,
-		arg.Exchange,
-		arg.RoutingKey,
-		arg.Headers,
+		arg.MessageType,
+		arg.ResourceID,
 		arg.Payload,
 	)
 	return err
@@ -51,8 +47,7 @@ func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessa
 const listUnpublishedOutboxMessages = `-- name: ListUnpublishedOutboxMessages :many
 SELECT
     id,
-    exchange,
-    routing_key,
+    message_type,
     payload
 FROM outbox
 WHERE published_at IS NULL
@@ -61,10 +56,9 @@ LIMIT $1
 `
 
 type ListUnpublishedOutboxMessagesRow struct {
-	ID         uuid.UUID       `json:"id"`
-	Exchange   string          `json:"exchange"`
-	RoutingKey string          `json:"routing_key"`
-	Payload    json.RawMessage `json:"payload"`
+	ID          uuid.UUID       `json:"id"`
+	MessageType string          `json:"message_type"`
+	Payload     json.RawMessage `json:"payload"`
 }
 
 func (q *Queries) ListUnpublishedOutboxMessages(ctx context.Context, batchSize int32) ([]ListUnpublishedOutboxMessagesRow, error) {
@@ -76,12 +70,7 @@ func (q *Queries) ListUnpublishedOutboxMessages(ctx context.Context, batchSize i
 	items := []ListUnpublishedOutboxMessagesRow{}
 	for rows.Next() {
 		var i ListUnpublishedOutboxMessagesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Exchange,
-			&i.RoutingKey,
-			&i.Payload,
-		); err != nil {
+		if err := rows.Scan(&i.ID, &i.MessageType, &i.Payload); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
