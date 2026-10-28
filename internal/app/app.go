@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -12,11 +14,15 @@ import (
 
 	"github.com/pp-sem7-team/backend/internal/auth"
 	"github.com/pp-sem7-team/backend/internal/broker"
+	"github.com/pp-sem7-team/backend/internal/changes"
 	"github.com/pp-sem7-team/backend/internal/cleanup"
 	"github.com/pp-sem7-team/backend/internal/config"
 	"github.com/pp-sem7-team/backend/internal/db"
 	"github.com/pp-sem7-team/backend/internal/logger"
+	"github.com/pp-sem7-team/backend/internal/outbox"
 )
+
+const analysisResultPrefetch = 10
 
 func Run() error {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
@@ -43,17 +49,57 @@ func Run() error {
 
 	querier := db.New(database.Pool)
 
-	cleanupCtx, stopCleanup := context.WithCancel(context.Background())
-	defer stopCleanup()
-
-	go cleanup.RefreshTokens(cleanupCtx, querier, log)
-
 	tokenManager, err := auth.NewJWTTokenManager(cfg.Auth.JWTSecret)
 	if err != nil {
 		return err
 	}
 
-	router := NewRouter(database, querier, tokenManager, log)
+	appCtx, stopApp := context.WithCancel(context.Background())
+	defer stopApp()
+
+	var workers sync.WaitGroup
+
+	changesService := changes.NewService(database, querier, log.With("module", "changes"))
+	analysisConsumer := changes.NewAnalysisResultConsumer(changesService, log.With("module", "analysis"))
+	outboxWorker := outbox.NewWorker(
+		querier,
+		brokerClient,
+		cfg.Outbox.Retention,
+		log.With("module", "outbox"),
+	)
+
+	workers.Add(4)
+
+	go func() {
+		defer workers.Done()
+		outboxWorker.Run(appCtx)
+	}()
+
+	go func() {
+		defer workers.Done()
+		changesService.RunTimeoutWorker(appCtx, cfg.Generation.Timeout)
+	}()
+
+	go func() {
+		defer workers.Done()
+
+		err := brokerClient.Consume(
+			appCtx,
+			broker.AnalysisResultsQueue,
+			analysisResultPrefetch,
+			analysisConsumer.Handle,
+		)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			log.Error("analysis result consumer stopped", "error", err)
+		}
+	}()
+
+	go func() {
+		defer workers.Done()
+		cleanup.RefreshTokens(appCtx, querier, log)
+	}()
+
+	router := NewRouter(database, querier, tokenManager, changesService, log)
 
 	server := &http.Server{
 		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,
@@ -73,6 +119,9 @@ func Run() error {
 
 	select {
 	case err := <-serverErrors:
+		stopApp()
+		workers.Wait()
+
 		if err == http.ErrServerClosed {
 			return nil
 		}
@@ -82,6 +131,9 @@ func Run() error {
 
 	case sig := <-signalCh:
 		log.Info("shutdown signal received", "signal", sig.String())
+
+		stopApp()
+		workers.Wait()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

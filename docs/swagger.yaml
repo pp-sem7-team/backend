@@ -87,6 +87,104 @@ definitions:
         - $ref: '#/definitions/branch.BranchStatus'
         example: closed
     type: object
+  changes.AnalysisResultResponse:
+    properties:
+      created_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440002
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/changes.AnalysisStatus'
+        example: pending
+      structured_changes:
+        type: object
+      updated_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+    type: object
+  changes.AnalysisStatus:
+    enum:
+    - pending
+    - done
+    - failed
+    type: string
+    x-enum-varnames:
+    - AnalysisStatusPending
+    - AnalysisStatusDone
+    - AnalysisStatusFailed
+  changes.ChangeListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/changes.ChangeResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  changes.ChangeResponse:
+    properties:
+      analysis:
+        $ref: '#/definitions/changes.AnalysisResultResponse'
+      branch_id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      commit:
+        allOf:
+        - $ref: '#/definitions/changes.CommitResponse'
+        description: Commit is nil until the commit flow is implemented.
+      created_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      sequence_number:
+        example: 1
+        type: integer
+    type: object
+  changes.CommitResponse:
+    properties:
+      created_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440003
+        type: string
+      is_edited_by_user:
+        example: false
+        type: boolean
+      message:
+        example: add changes endpoint
+        type: string
+      scope:
+        example: api
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/changes.AnalysisStatus'
+        example: pending
+      type:
+        example: feat
+        type: string
+      updated_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+    type: object
+  changes.CreateChangeRequest:
+    properties:
+      raw_diff:
+        example: diff --git a/main.go b/main.go
+        type: string
+    required:
+    - raw_diff
+    type: object
   httpx.Error:
     properties:
       code:
@@ -439,6 +537,142 @@ paths:
       summary: Update branch
       tags:
       - branches
+  /branches/{branch_id}/changes:
+    get:
+      description: Returns changes of a branch ordered by sequence number.
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      - default: 0
+        description: Number of items to skip
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      - default: 10
+        description: Maximum number of items
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/changes.ChangeListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List changes
+      tags:
+      - changes
+    post:
+      consumes:
+      - application/json
+      description: Creates a change in a branch, starts asynchronous analysis and
+        returns 202 Accepted.
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      - description: Change data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/changes.CreateChangeRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/changes.ChangeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create change
+      tags:
+      - changes
+  /changes/{change_id}:
+    get:
+      description: Returns a change with its analysis result.
+      parameters:
+      - description: Change ID
+        in: path
+        name: change_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/changes.ChangeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get change
+      tags:
+      - changes
   /health:
     get:
       description: Checks that the server is running.
