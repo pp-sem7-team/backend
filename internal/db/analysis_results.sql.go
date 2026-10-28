@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -48,7 +49,7 @@ func (q *Queries) ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResu
 	return result.RowsAffected(), nil
 }
 
-const createAnalysisResult = `-- name: CreateAnalysisResult :exec
+const createAnalysisResult = `-- name: CreateAnalysisResult :one
 INSERT INTO analysis_results (
     id,
     change_id,
@@ -59,6 +60,12 @@ VALUES (
     $2,
     'pending'
 )
+RETURNING
+    id,
+    structured_changes,
+    status,
+    created_at,
+    updated_at
 `
 
 type CreateAnalysisResultParams struct {
@@ -66,9 +73,25 @@ type CreateAnalysisResultParams struct {
 	ChangeID uuid.UUID `json:"change_id"`
 }
 
-func (q *Queries) CreateAnalysisResult(ctx context.Context, arg CreateAnalysisResultParams) error {
-	_, err := q.db.Exec(ctx, createAnalysisResult, arg.ID, arg.ChangeID)
-	return err
+type CreateAnalysisResultRow struct {
+	ID                uuid.UUID        `json:"id"`
+	StructuredChanges []byte           `json:"structured_changes"`
+	Status            GenerationStatus `json:"status"`
+	CreatedAt         time.Time        `json:"created_at"`
+	UpdatedAt         time.Time        `json:"updated_at"`
+}
+
+func (q *Queries) CreateAnalysisResult(ctx context.Context, arg CreateAnalysisResultParams) (CreateAnalysisResultRow, error) {
+	row := q.db.QueryRow(ctx, createAnalysisResult, arg.ID, arg.ChangeID)
+	var i CreateAnalysisResultRow
+	err := row.Scan(
+		&i.ID,
+		&i.StructuredChanges,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const failStalePendingAnalyses = `-- name: FailStalePendingAnalyses :execrows
@@ -77,11 +100,11 @@ SET
     status = 'failed',
     updated_at = now()
 WHERE status = 'pending'
-  AND created_at < now() - ($1::int * interval '1 second')
+  AND created_at < now() - ($1::bigint * interval '1 millisecond')
 `
 
-func (q *Queries) FailStalePendingAnalyses(ctx context.Context, timeoutSeconds int32) (int64, error) {
-	result, err := q.db.Exec(ctx, failStalePendingAnalyses, timeoutSeconds)
+func (q *Queries) FailStalePendingAnalyses(ctx context.Context, timeoutMs int64) (int64, error) {
+	result, err := q.db.Exec(ctx, failStalePendingAnalyses, timeoutMs)
 	if err != nil {
 		return 0, err
 	}

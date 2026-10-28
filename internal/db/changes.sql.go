@@ -33,7 +33,7 @@ func (q *Queries) CountChangesByBranch(ctx context.Context, arg CountChangesByBr
 	return column_1, err
 }
 
-const createChange = `-- name: CreateChange :exec
+const createChange = `-- name: CreateChange :one
 INSERT INTO changes (
     id,
     branch_id,
@@ -50,6 +50,11 @@ VALUES (
     ),
     $3
 )
+RETURNING
+    id,
+    branch_id,
+    sequence_number,
+    created_at
 `
 
 type CreateChangeParams struct {
@@ -58,9 +63,23 @@ type CreateChangeParams struct {
 	RawDiff  string    `json:"raw_diff"`
 }
 
-func (q *Queries) CreateChange(ctx context.Context, arg CreateChangeParams) error {
-	_, err := q.db.Exec(ctx, createChange, arg.ID, arg.BranchID, arg.RawDiff)
-	return err
+type CreateChangeRow struct {
+	ID             uuid.UUID `json:"id"`
+	BranchID       uuid.UUID `json:"branch_id"`
+	SequenceNumber int32     `json:"sequence_number"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (q *Queries) CreateChange(ctx context.Context, arg CreateChangeParams) (CreateChangeRow, error) {
+	row := q.db.QueryRow(ctx, createChange, arg.ID, arg.BranchID, arg.RawDiff)
+	var i CreateChangeRow
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.SequenceNumber,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getChange = `-- name: GetChange :one

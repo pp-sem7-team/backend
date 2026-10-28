@@ -9,7 +9,7 @@ WHERE b.id = sqlc.arg(branch_id)
 FOR UPDATE OF b;
 
 
--- name: CreateChange :exec
+-- name: CreateChange :one
 INSERT INTO changes (
     id,
     branch_id,
@@ -25,7 +25,12 @@ VALUES (
         WHERE branch_id = sqlc.arg(branch_id)
     ),
     sqlc.arg(raw_diff)
-);
+)
+RETURNING
+    id,
+    branch_id,
+    sequence_number,
+    created_at;
 
 -- name: GetChange :one
 SELECT

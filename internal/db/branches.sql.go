@@ -11,6 +11,28 @@ import (
 	"github.com/google/uuid"
 )
 
+const branchExists = `-- name: BranchExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM branches b
+    JOIN workspaces w ON w.id = b.workspace_id
+    WHERE b.id = $1
+      AND w.user_id = $2
+)
+`
+
+type BranchExistsParams struct {
+	BranchID uuid.UUID `json:"branch_id"`
+	UserID   uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) BranchExists(ctx context.Context, arg BranchExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, branchExists, arg.BranchID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const countBranches = `-- name: CountBranches :one
 SELECT COUNT(*)
 FROM branches b

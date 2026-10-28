@@ -12,12 +12,13 @@ import (
 
 type Querier interface {
 	ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (int64, error)
+	BranchExists(ctx context.Context, arg BranchExistsParams) (bool, error)
 	CountBranches(ctx context.Context, arg CountBranchesParams) (int64, error)
 	CountChangesByBranch(ctx context.Context, arg CountChangesByBranchParams) (int64, error)
 	CountWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error)
-	CreateAnalysisResult(ctx context.Context, arg CreateAnalysisResultParams) error
+	CreateAnalysisResult(ctx context.Context, arg CreateAnalysisResultParams) (CreateAnalysisResultRow, error)
 	CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error)
-	CreateChange(ctx context.Context, arg CreateChangeParams) error
+	CreateChange(ctx context.Context, arg CreateChangeParams) (CreateChangeRow, error)
 	CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessageParams) error
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
@@ -26,7 +27,7 @@ type Querier interface {
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
-	FailStalePendingAnalyses(ctx context.Context, timeoutSeconds int32) (int64, error)
+	FailStalePendingAnalyses(ctx context.Context, timeoutMs int64) (int64, error)
 	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
 	GetChange(ctx context.Context, arg GetChangeParams) (GetChangeRow, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (GetUserRow, error)

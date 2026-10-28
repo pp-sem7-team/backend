@@ -1,4 +1,4 @@
--- name: CreateAnalysisResult :exec
+-- name: CreateAnalysisResult :one
 INSERT INTO analysis_results (
     id,
     change_id,
@@ -8,7 +8,13 @@ VALUES (
     sqlc.arg(id),
     sqlc.arg(change_id),
     'pending'
-);
+)
+RETURNING
+    id,
+    structured_changes,
+    status,
+    created_at,
+    updated_at;
 
 -- name: ApplyAnalysisResult :execrows
 UPDATE analysis_results ar
@@ -32,4 +38,4 @@ SET
     status = 'failed',
     updated_at = now()
 WHERE status = 'pending'
-  AND created_at < now() - (sqlc.arg(timeout_seconds)::int * interval '1 second');
+  AND created_at < now() - (sqlc.arg(timeout_ms)::bigint * interval '1 millisecond');
