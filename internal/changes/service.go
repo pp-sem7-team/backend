@@ -128,6 +128,7 @@ func (s *Service) Create(
 		return Change{}, err
 	}
 
+	// TODO: create a pending commit here when the commit flow is implemented.
 	payload, err := json.Marshal(analysisRequestPayload{
 		AnalysisID: analysisID,
 		RawDiff:    rawDiff,
