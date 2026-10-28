@@ -116,8 +116,9 @@ func (s *Service) Create(
 	}
 
 	analysisRow, err := querier.CreateAnalysisResult(ctx, db.CreateAnalysisResultParams{
-		ID:       analysisID,
-		ChangeID: changeID,
+		ID:        analysisID,
+		ChangeID:  changeID,
+		MessageID: outboxID,
 	})
 	if err != nil {
 		s.log.Error("failed to create analysis result",
@@ -144,7 +145,6 @@ func (s *Service) Create(
 	err = querier.CreateOutboxMessage(ctx, db.CreateOutboxMessageParams{
 		ID:          outboxID,
 		MessageType: analysisRequestMessageType,
-		ResourceID:  analysisID,
 		Payload:     payload,
 	})
 	if err != nil {

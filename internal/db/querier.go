@@ -25,6 +25,7 @@ type Querier interface {
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (CreateWorkspaceRow, error)
 	DeleteBranch(ctx context.Context, arg DeleteBranchParams) (int64, error)
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
+	DeletePublishedOutboxMessages(ctx context.Context, retentionMs int64) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
 	FailStalePendingAnalyses(ctx context.Context, timeoutMs int64) (int64, error)

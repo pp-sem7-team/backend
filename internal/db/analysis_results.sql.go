@@ -20,13 +20,7 @@ SET
     updated_at = now()
 WHERE ar.id = $3
   AND ar.status = 'pending'
-  AND EXISTS (
-      SELECT 1
-      FROM outbox o
-      WHERE o.id = $4
-        AND o.message_type = 'analysis.request'
-        AND o.resource_id = ar.id
-  )
+  AND ar.message_id = $4
 `
 
 type ApplyAnalysisResultParams struct {
@@ -53,11 +47,13 @@ const createAnalysisResult = `-- name: CreateAnalysisResult :one
 INSERT INTO analysis_results (
     id,
     change_id,
+    message_id,
     status
 )
 VALUES (
     $1,
     $2,
+    $3,
     'pending'
 )
 RETURNING
@@ -69,8 +65,9 @@ RETURNING
 `
 
 type CreateAnalysisResultParams struct {
-	ID       uuid.UUID `json:"id"`
-	ChangeID uuid.UUID `json:"change_id"`
+	ID        uuid.UUID `json:"id"`
+	ChangeID  uuid.UUID `json:"change_id"`
+	MessageID uuid.UUID `json:"message_id"`
 }
 
 type CreateAnalysisResultRow struct {
@@ -82,7 +79,7 @@ type CreateAnalysisResultRow struct {
 }
 
 func (q *Queries) CreateAnalysisResult(ctx context.Context, arg CreateAnalysisResultParams) (CreateAnalysisResultRow, error) {
-	row := q.db.QueryRow(ctx, createAnalysisResult, arg.ID, arg.ChangeID)
+	row := q.db.QueryRow(ctx, createAnalysisResult, arg.ID, arg.ChangeID, arg.MessageID)
 	var i CreateAnalysisResultRow
 	err := row.Scan(
 		&i.ID,

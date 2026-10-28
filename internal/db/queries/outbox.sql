@@ -2,13 +2,11 @@
 INSERT INTO outbox (
     id,
     message_type,
-    resource_id,
     payload
 )
 VALUES (
     sqlc.arg(id),
     sqlc.arg(message_type),
-    sqlc.arg(resource_id),
     sqlc.arg(payload)
 );
 
@@ -27,3 +25,8 @@ UPDATE outbox
 SET published_at = now()
 WHERE id = sqlc.arg(id)
   AND published_at IS NULL;
+
+-- name: DeletePublishedOutboxMessages :execrows
+DELETE FROM outbox
+WHERE published_at IS NOT NULL
+  AND published_at < now() - (sqlc.arg(retention_ms)::bigint * interval '1 millisecond');

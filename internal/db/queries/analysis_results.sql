@@ -2,11 +2,13 @@
 INSERT INTO analysis_results (
     id,
     change_id,
+    message_id,
     status
 )
 VALUES (
     sqlc.arg(id),
     sqlc.arg(change_id),
+    sqlc.arg(message_id),
     'pending'
 )
 RETURNING
@@ -24,13 +26,7 @@ SET
     updated_at = now()
 WHERE ar.id = sqlc.arg(analysis_id)
   AND ar.status = 'pending'
-  AND EXISTS (
-      SELECT 1
-      FROM outbox o
-      WHERE o.id = sqlc.arg(message_id)
-        AND o.message_type = 'analysis.request'
-        AND o.resource_id = ar.id
-  );
+  AND ar.message_id = sqlc.arg(message_id);
 
 -- name: FailStalePendingAnalyses :execrows
 UPDATE analysis_results

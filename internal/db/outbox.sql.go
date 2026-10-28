@@ -16,32 +16,38 @@ const createOutboxMessage = `-- name: CreateOutboxMessage :exec
 INSERT INTO outbox (
     id,
     message_type,
-    resource_id,
     payload
 )
 VALUES (
     $1,
     $2,
-    $3,
-    $4
+    $3
 )
 `
 
 type CreateOutboxMessageParams struct {
 	ID          uuid.UUID       `json:"id"`
 	MessageType string          `json:"message_type"`
-	ResourceID  uuid.UUID       `json:"resource_id"`
 	Payload     json.RawMessage `json:"payload"`
 }
 
 func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessageParams) error {
-	_, err := q.db.Exec(ctx, createOutboxMessage,
-		arg.ID,
-		arg.MessageType,
-		arg.ResourceID,
-		arg.Payload,
-	)
+	_, err := q.db.Exec(ctx, createOutboxMessage, arg.ID, arg.MessageType, arg.Payload)
 	return err
+}
+
+const deletePublishedOutboxMessages = `-- name: DeletePublishedOutboxMessages :execrows
+DELETE FROM outbox
+WHERE published_at IS NOT NULL
+  AND published_at < now() - ($1::bigint * interval '1 millisecond')
+`
+
+func (q *Queries) DeletePublishedOutboxMessages(ctx context.Context, retentionMs int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deletePublishedOutboxMessages, retentionMs)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const listUnpublishedOutboxMessages = `-- name: ListUnpublishedOutboxMessages :many
