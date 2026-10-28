@@ -12,6 +12,7 @@ type Config struct {
 	Postgres   PostgresConfig
 	Auth       AuthConfig
 	Generation GenerationConfig
+	Outbox     OutboxConfig
 	RabbitMQ   RabbitMQConfig
 	Logging    LoggingConfig
 }
@@ -35,6 +36,10 @@ type AuthConfig struct {
 
 type GenerationConfig struct {
 	Timeout time.Duration
+}
+
+type OutboxConfig struct {
+	Retention time.Duration
 }
 
 type RabbitMQConfig struct {
@@ -70,6 +75,10 @@ func Load() Config {
 
 		Generation: GenerationConfig{
 			Timeout: getEnvDuration("GENERATION_TIMEOUT", 5*time.Minute),
+		},
+
+		Outbox: OutboxConfig{
+			Retention: getEnvDuration("OUTBOX_RETENTION", 7*24*time.Hour),
 		},
 
 		RabbitMQ: RabbitMQConfig{
