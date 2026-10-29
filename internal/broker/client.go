@@ -38,12 +38,6 @@ type Client struct {
 	logger         *slog.Logger
 }
 
-type topologyItem struct {
-	queue      string
-	exchange   string
-	routingKey string
-}
-
 func NewClient(cfg config.RabbitMQConfig, logger *slog.Logger) (*Client, error) {
 	u := url.URL{
 		Scheme: "amqp",

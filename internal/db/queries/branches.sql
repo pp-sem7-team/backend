@@ -32,6 +32,15 @@ JOIN workspaces w ON w.id = b.workspace_id
 WHERE b.id = sqlc.arg(id)
   AND w.user_id = sqlc.arg(user_id);
 
+-- name: BranchExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM branches b
+    JOIN workspaces w ON w.id = b.workspace_id
+    WHERE b.id = sqlc.arg(branch_id)
+      AND w.user_id = sqlc.arg(user_id)
+);
+
 -- name: ListBranches :many
 SELECT
     b.id,

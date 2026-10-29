@@ -11,24 +11,37 @@ import (
 )
 
 type Querier interface {
+	ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (int64, error)
+	BranchExists(ctx context.Context, arg BranchExistsParams) (bool, error)
 	CountBranches(ctx context.Context, arg CountBranchesParams) (int64, error)
+	CountChangesByBranch(ctx context.Context, arg CountChangesByBranchParams) (int64, error)
 	CountWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error)
+	CreateAnalysisResult(ctx context.Context, arg CreateAnalysisResultParams) (CreateAnalysisResultRow, error)
 	CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error)
+	CreateChange(ctx context.Context, arg CreateChangeParams) (CreateChangeRow, error)
+	CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessageParams) error
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (CreateWorkspaceRow, error)
 	DeleteBranch(ctx context.Context, arg DeleteBranchParams) (int64, error)
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
+	DeletePublishedOutboxMessages(ctx context.Context, retentionMs int64) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
+	FailStalePendingAnalyses(ctx context.Context, timeoutMs int64) (int64, error)
 	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
+	GetChange(ctx context.Context, arg GetChangeParams) (GetChangeRow, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (GetUserRow, error)
 	GetUserCredentialsByEmail(ctx context.Context, email string) (GetUserCredentialsByEmailRow, error)
 	GetUserIDByRefreshTokenHash(ctx context.Context, tokenHash string) (uuid.UUID, error)
 	GetUserPasswordHash(ctx context.Context, userID uuid.UUID) (string, error)
 	GetWorkspace(ctx context.Context, arg GetWorkspaceParams) (GetWorkspaceRow, error)
 	ListBranches(ctx context.Context, arg ListBranchesParams) ([]Branch, error)
+	ListChangesByBranch(ctx context.Context, arg ListChangesByBranchParams) ([]ListChangesByBranchRow, error)
+	ListUnpublishedOutboxMessages(ctx context.Context, batchSize int32) ([]ListUnpublishedOutboxMessagesRow, error)
 	ListWorkspaces(ctx context.Context, arg ListWorkspacesParams) ([]ListWorkspacesRow, error)
+	LockBranchForChange(ctx context.Context, arg LockBranchForChangeParams) (LockBranchForChangeRow, error)
+	MarkOutboxMessagePublished(ctx context.Context, id uuid.UUID) error
 	RotateRefreshToken(ctx context.Context, arg RotateRefreshTokenParams) (int64, error)
 	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error)

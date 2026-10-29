@@ -382,6 +382,213 @@
                 }
             }
         },
+        "/branches/{branch_id}/changes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns changes of a branch ordered by sequence number.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "changes"
+                ],
+                "summary": "List changes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Branch ID",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of items to skip",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Maximum number of items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/changes.ChangeListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a change in a branch, starts asynchronous analysis and returns 202 Accepted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "changes"
+                ],
+                "summary": "Create change",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Branch ID",
+                        "name": "branch_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Change data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/changes.CreateChangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/changes.ChangeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/changes/{change_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a change with its analysis result.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "changes"
+                ],
+                "summary": "Get change",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Change ID",
+                        "name": "change_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/changes.ChangeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Checks that the server is running.",
@@ -1115,6 +1322,152 @@
                         }
                     ],
                     "example": "closed"
+                }
+            }
+        },
+        "changes.AnalysisResultResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-01-01T12:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440002"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/changes.AnalysisStatus"
+                        }
+                    ],
+                    "example": "pending"
+                },
+                "structured_changes": {
+                    "type": "object"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-01-01T12:00:00Z"
+                }
+            }
+        },
+        "changes.AnalysisStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "done",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "AnalysisStatusPending",
+                "AnalysisStatusDone",
+                "AnalysisStatusFailed"
+            ]
+        },
+        "changes.ChangeListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/changes.ChangeResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "changes.ChangeResponse": {
+            "type": "object",
+            "properties": {
+                "analysis": {
+                    "$ref": "#/definitions/changes.AnalysisResultResponse"
+                },
+                "branch_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440001"
+                },
+                "commit": {
+                    "description": "Commit is nil until the commit flow is implemented.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/changes.CommitResponse"
+                        }
+                    ]
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-01-01T12:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "sequence_number": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "changes.CommitResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-01-01T12:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440003"
+                },
+                "is_edited_by_user": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "add changes endpoint"
+                },
+                "scope": {
+                    "type": "string",
+                    "example": "api"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/changes.AnalysisStatus"
+                        }
+                    ],
+                    "example": "pending"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "feat"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-01-01T12:00:00Z"
+                }
+            }
+        },
+        "changes.CreateChangeRequest": {
+            "type": "object",
+            "required": [
+                "raw_diff"
+            ],
+            "properties": {
+                "raw_diff": {
+                    "type": "string",
+                    "example": "diff --git a/main.go b/main.go"
                 }
             }
         },

@@ -4,14 +4,17 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"time"
 )
 
 type Config struct {
-	Server   ServerConfig
-	Postgres PostgresConfig
-	RabbitMQ RabbitMQConfig
-	Auth     AuthConfig
-	Logging  LoggingConfig
+	Server     ServerConfig
+	Postgres   PostgresConfig
+	Auth       AuthConfig
+	Generation GenerationConfig
+	Outbox     OutboxConfig
+	RabbitMQ   RabbitMQConfig
+	Logging    LoggingConfig
 }
 
 type ServerConfig struct {
@@ -29,6 +32,14 @@ type PostgresConfig struct {
 
 type AuthConfig struct {
 	JWTSecret string
+}
+
+type GenerationConfig struct {
+	Timeout time.Duration
+}
+
+type OutboxConfig struct {
+	Retention time.Duration
 }
 
 type RabbitMQConfig struct {
@@ -62,6 +73,14 @@ func Load() Config {
 			JWTSecret: os.Getenv("JWT_SECRET"),
 		},
 
+		Generation: GenerationConfig{
+			Timeout: getEnvDuration("GENERATION_TIMEOUT", 5*time.Minute),
+		},
+
+		Outbox: OutboxConfig{
+			Retention: getEnvDuration("OUTBOX_RETENTION", 7*24*time.Hour),
+		},
+
 		RabbitMQ: RabbitMQConfig{
 			Host:     getEnv("RABBITMQ_HOST", "localhost"),
 			Port:     getEnv("RABBITMQ_PORT", "5672"),
@@ -83,6 +102,21 @@ func getEnv(key, def string) string {
 	}
 
 	return value
+}
+
+func getEnvDuration(key string, def time.Duration) time.Duration {
+	value := os.Getenv(key)
+	if value == "" {
+		return def
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err != nil || duration <= 0 {
+		log.Printf("invalid duration for %s=%q, using default %s", key, value, def)
+		return def
+	}
+
+	return duration
 }
 
 func getEnvLogLevel(key string, def slog.Level) slog.Level {

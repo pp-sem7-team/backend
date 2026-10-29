@@ -154,6 +154,7 @@ type AnalysisResult struct {
 	Status            GenerationStatus `json:"status"`
 	CreatedAt         time.Time        `json:"created_at"`
 	UpdatedAt         time.Time        `json:"updated_at"`
+	MessageID         uuid.UUID        `json:"message_id"`
 }
 
 type Branch struct {
@@ -183,16 +184,15 @@ type Commit struct {
 	Status         GenerationStatus `json:"status"`
 	CreatedAt      time.Time        `json:"created_at"`
 	UpdatedAt      time.Time        `json:"updated_at"`
+	MessageID      uuid.UUID        `json:"message_id"`
 }
 
 type Outbox struct {
 	ID          uuid.UUID          `json:"id"`
-	Exchange    string             `json:"exchange"`
-	RoutingKey  string             `json:"routing_key"`
-	Headers     json.RawMessage    `json:"headers"`
 	Payload     json.RawMessage    `json:"payload"`
 	CreatedAt   time.Time          `json:"created_at"`
 	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	MessageType string             `json:"message_type"`
 }
 
 type PullRequest struct {
@@ -204,6 +204,7 @@ type PullRequest struct {
 	Status         GenerationStatus `json:"status"`
 	CreatedAt      time.Time        `json:"created_at"`
 	UpdatedAt      time.Time        `json:"updated_at"`
+	MessageID      uuid.UUID        `json:"message_id"`
 }
 
 type RefreshToken struct {

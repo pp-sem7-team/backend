@@ -17,6 +17,14 @@ const (
 	pullRequestResultsQueue  = "generation.pull_request.results"
 )
 
+type topologyItem struct {
+	queue      string
+	exchange   string
+	routingKey string
+}
+
+const AnalysisResultsQueue = analysisResultsQueue
+
 func (c *Client) declareTopology() error {
 	exchanges := []string{
 		commandsExchange,
