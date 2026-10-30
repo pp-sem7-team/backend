@@ -32,6 +32,8 @@ const (
 
 	reconnectMinDelay = time.Second
 	reconnectMaxDelay = 30 * time.Second
+
+	consumerStableSession = reconnectMaxDelay
 )
 
 type Client struct {

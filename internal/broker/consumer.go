@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"errors"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -17,10 +18,50 @@ func (c *Client) Consume(
 		return errPrefetchInvalid
 	}
 
+	delay := reconnectMinDelay
+
+	for {
+		sessionStart := time.Now()
+
+		err := c.consumeLoop(ctx, queue, prefetch, handler)
+		if err == nil || errors.Is(err, context.Canceled) {
+			return nil
+		}
+
+		if time.Since(sessionStart) >= consumerStableSession {
+			delay = reconnectMinDelay
+		}
+
+		c.logger.Warn("RabbitMQ consumer restarted",
+			"queue", queue,
+			"error", err,
+			"next_delay", delay,
+		)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+
+		if delay *= 2; delay > reconnectMaxDelay {
+			delay = reconnectMaxDelay
+		}
+	}
+}
+
+func (c *Client) consumeLoop(
+	ctx context.Context,
+	queue string,
+	prefetch int,
+	handler func(context.Context, amqp.Delivery) error,
+) error {
 	c.stateMu.Lock()
 	if c.conn == nil || c.conn.IsClosed() {
-		c.stateMu.Unlock()
-		return errConnectionUnavailable
+		if err := c.connectLocked(); err != nil {
+			c.stateMu.Unlock()
+			return err
+		}
 	}
 
 	channel, err := c.conn.Channel()
