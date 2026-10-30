@@ -15,10 +15,9 @@ import (
 )
 
 var (
-	errPublisherReturnClosed  = errors.New("RabbitMQ publisher return channel closed")
-	errPublisherConfirmClosed = errors.New("RabbitMQ publisher confirmation channel closed")
-	errPublisherNack          = errors.New("RabbitMQ negatively acknowledged message")
-	errMessageUnroutable      = errors.New("RabbitMQ could not route message")
+	errPublisherReturnClosed = errors.New("RabbitMQ publisher return channel closed")
+	errPublisherNack         = errors.New("RabbitMQ negatively acknowledged message")
+	errMessageUnroutable     = errors.New("RabbitMQ could not route message")
 
 	errConnectionUnavailable = errors.New("RabbitMQ connection is unavailable")
 	errReconnectPending      = errors.New("RabbitMQ reconnect is pending")
@@ -42,10 +41,10 @@ type Client struct {
 	conn           *amqp.Connection
 	channel        *amqp.Channel
 	publishChannel *amqp.Channel
-	confirms       chan amqp.Confirmation
 	returns        chan amqp.Return
 
 	stateMu sync.Mutex
+	sendMu  sync.Mutex
 
 	reconnectDelay time.Duration
 	reconnectAfter time.Time
@@ -149,7 +148,6 @@ func (c *Client) openPublisherLocked() error {
 	}
 
 	c.publishChannel = channel
-	c.confirms = channel.NotifyPublish(make(chan amqp.Confirmation, notifyBufferSize))
 	c.returns = channel.NotifyReturn(make(chan amqp.Return, notifyBufferSize))
 
 	c.watchPublishChannelLocked(channel)
@@ -173,7 +171,6 @@ func (c *Client) resetLocked() {
 	c.conn = nil
 	c.channel = nil
 	c.publishChannel = nil
-	c.confirms = nil
 	c.returns = nil
 }
 
@@ -209,7 +206,6 @@ func (c *Client) watchConnectionLocked(conn *amqp.Connection) {
 		c.conn = nil
 		c.channel = nil
 		c.publishChannel = nil
-		c.confirms = nil
 		c.returns = nil
 	}()
 }
@@ -232,7 +228,6 @@ func (c *Client) watchPublishChannelLocked(channel *amqp.Channel) {
 		}
 
 		c.publishChannel = nil
-		c.confirms = nil
 		c.returns = nil
 	}()
 }
@@ -268,14 +263,22 @@ func (c *Client) PublishCommand(
 	routingKey, messageID string,
 	body []byte,
 ) error {
-	c.stateMu.Lock()
-	defer c.stateMu.Unlock()
-
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
-	if err := c.ensurePublisherLocked(); err != nil {
+	c.sendMu.Lock()
+	defer c.sendMu.Unlock()
+
+	c.stateMu.Lock()
+
+	err := c.ensurePublisherLocked()
+	publishChannel := c.publishChannel
+	returns := c.returns
+
+	c.stateMu.Unlock()
+
+	if err != nil {
 		c.logger.Error("RabbitMQ publisher unavailable",
 			"routing_key", routingKey,
 			"message_id", messageID,
@@ -284,10 +287,8 @@ func (c *Client) PublishCommand(
 		return err
 	}
 
-	timer := time.NewTimer(publishTimeout)
-	defer timer.Stop()
-
-	err := c.publishChannel.Publish(
+	confirmation, err := publishChannel.PublishWithDeferredConfirmWithContext(
+		ctx,
 		commandsExchange,
 		routingKey,
 		true,
@@ -313,84 +314,52 @@ func (c *Client) PublishCommand(
 		return err
 	}
 
-	var returned *amqp.Return
+	waitCtx, cancel := context.WithTimeout(ctx, publishTimeout)
+	defer cancel()
 
-	for {
-		select {
-		case msg, ok := <-c.returns:
-			if !ok {
-				c.invalidatePublisherLocked()
-				c.logger.Error("RabbitMQ publisher return channel closed",
-					"routing_key", routingKey,
-					"message_id", messageID,
-				)
-				return errPublisherReturnClosed
-			}
-
-			if msg.MessageId == messageID {
-				returned = &msg
-			}
-
-		case confirmation, ok := <-c.confirms:
-			if !ok {
-				c.invalidatePublisherLocked()
-				c.logger.Error("RabbitMQ publisher confirmation channel closed",
-					"routing_key", routingKey,
-					"message_id", messageID,
-				)
-				return errPublisherConfirmClosed
-			}
-
-			pendingReturn, closed := c.drainReturns(messageID)
-			if closed {
-				c.invalidatePublisherLocked()
-				c.logger.Error("RabbitMQ publisher return channel closed",
-					"routing_key", routingKey,
-					"message_id", messageID,
-				)
-				return errPublisherReturnClosed
-			}
-			if pendingReturn != nil {
-				returned = pendingReturn
-			}
-
-			if returned != nil {
-				c.logger.Error("RabbitMQ could not route message",
-					"routing_key", routingKey,
-					"message_id", messageID,
-					"reply_code", returned.ReplyCode,
-					"reply_text", returned.ReplyText,
-				)
-				return errMessageUnroutable
-			}
-
-			if !confirmation.Ack {
-				c.logger.Error("RabbitMQ negatively acknowledged message",
-					"routing_key", routingKey,
-					"message_id", messageID,
-				)
-				return errPublisherNack
-			}
-
-			c.logger.Info("RabbitMQ command published",
-				"routing_key", routingKey,
-				"message_id", messageID,
-			)
-			return nil
-
-		case <-ctx.Done():
-			c.invalidatePublisherLocked()
-			return ctx.Err()
-
-		case <-timer.C:
-			c.invalidatePublisherLocked()
-			c.logger.Error("RabbitMQ command publish timed out",
-				"routing_key", routingKey,
-				"message_id", messageID,
-			)
-			return context.DeadlineExceeded
-		}
+	ack, err := confirmation.WaitContext(waitCtx)
+	if err != nil {
+		c.logger.Error("RabbitMQ command confirmation failed",
+			"routing_key", routingKey,
+			"message_id", messageID,
+			"error", err,
+		)
+		return err
 	}
+
+	returned, closed := drainReturns(returns, messageID)
+
+	switch {
+	case closed:
+		c.logger.Error("RabbitMQ publisher return channel closed",
+			"routing_key", routingKey,
+			"message_id", messageID,
+		)
+		return errPublisherReturnClosed
+
+	case returned != nil:
+		c.logger.Error("RabbitMQ could not route message",
+			"routing_key", routingKey,
+			"message_id", messageID,
+			"reply_code", returned.ReplyCode,
+			"reply_text", returned.ReplyText,
+		)
+		return errMessageUnroutable
+
+	case !ack:
+		c.logger.Error("RabbitMQ negatively acknowledged message",
+			"routing_key", routingKey,
+			"message_id", messageID,
+		)
+		return errPublisherNack
+	}
+
+	c.logger.Info("RabbitMQ command published",
+		"routing_key", routingKey,
+		"message_id", messageID,
+	)
+
+	return nil
 }
 
 func (c *Client) ensurePublisherLocked() error {
@@ -519,26 +488,12 @@ func (c *Client) Consume(
 	}
 }
 
-func (c *Client) invalidatePublisherLocked() {
-	if c.publishChannel == nil {
-		return
-	}
-
-	if err := c.publishChannel.Close(); err != nil {
-		c.logger.Error("failed to close RabbitMQ publisher channel", "error", err)
-	}
-
-	c.publishChannel = nil
-	c.confirms = nil
-	c.returns = nil
-}
-
-func (c *Client) drainReturns(messageID string) (*amqp.Return, bool) {
+func drainReturns(returns <-chan amqp.Return, messageID string) (*amqp.Return, bool) {
 	var returned *amqp.Return
 
 	for {
 		select {
-		case msg, ok := <-c.returns:
+		case msg, ok := <-returns:
 			if !ok {
 				return returned, true
 			}
