@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	"github.com/pp-sem7-team/backend/internal/broker"
 )
 
 var (
@@ -32,38 +34,20 @@ func NewAnalysisResultConsumer(service *Service, log *slog.Logger) *AnalysisResu
 }
 
 func (c *AnalysisResultConsumer) Handle(ctx context.Context, delivery amqp.Delivery) error {
-	if delivery.CorrelationId == "" {
-		return ErrAnalysisResultCorrelationIDEmpty
-	}
-
-	messageID, err := uuid.Parse(delivery.CorrelationId)
+	message, messageID, err := parseAnalysisResult(delivery)
 	if err != nil {
-		return err
-	}
+		c.log.Warn("analysis result message rejected",
+			"queue_message_id", delivery.MessageId,
+			"correlation_id", delivery.CorrelationId,
+			"error", err,
+		)
 
-	var message analysisResultMessage
-	if err := json.Unmarshal(delivery.Body, &message); err != nil {
-		return err
-	}
-
-	if message.AnalysisID == uuid.Nil {
-		return ErrAnalysisResultAnalysisIDRequired
+		return broker.ErrDiscardMessage
 	}
 
 	status := AnalysisStatus(message.Status)
 
-	switch status {
-	case AnalysisStatusDone:
-		if len(message.StructuredChanges) == 0 ||
-			!json.Valid(message.StructuredChanges) ||
-			bytes.Equal(bytes.TrimSpace(message.StructuredChanges), []byte("null")) {
-			return ErrAnalysisResultStructuredChangesRequired
-		}
-	case AnalysisStatusFailed:
-		if message.Error == nil {
-			return ErrAnalysisResultErrorRequired
-		}
-
+	if status == AnalysisStatusFailed {
 		c.log.Warn("analysis generation failed",
 			"analysis_id", message.AnalysisID,
 			"message_id", messageID,
@@ -72,8 +56,6 @@ func (c *AnalysisResultConsumer) Handle(ctx context.Context, delivery amqp.Deliv
 		)
 
 		message.StructuredChanges = nil
-	default:
-		return ErrAnalysisResultInvalidStatus
 	}
 
 	applied, err := c.service.ApplyAnalysisResult(
@@ -96,4 +78,42 @@ func (c *AnalysisResultConsumer) Handle(ctx context.Context, delivery amqp.Deliv
 	}
 
 	return nil
+}
+
+func parseAnalysisResult(delivery amqp.Delivery) (analysisResultMessage, uuid.UUID, error) {
+	var message analysisResultMessage
+
+	if delivery.CorrelationId == "" {
+		return message, uuid.Nil, ErrAnalysisResultCorrelationIDEmpty
+	}
+
+	messageID, err := uuid.Parse(delivery.CorrelationId)
+	if err != nil {
+		return message, uuid.Nil, err
+	}
+
+	if err := json.Unmarshal(delivery.Body, &message); err != nil {
+		return message, uuid.Nil, err
+	}
+
+	if message.AnalysisID == uuid.Nil {
+		return message, uuid.Nil, ErrAnalysisResultAnalysisIDRequired
+	}
+
+	switch status := AnalysisStatus(message.Status); status {
+	case AnalysisStatusDone:
+		if len(message.StructuredChanges) == 0 ||
+			!json.Valid(message.StructuredChanges) ||
+			bytes.Equal(bytes.TrimSpace(message.StructuredChanges), []byte("null")) {
+			return message, uuid.Nil, ErrAnalysisResultStructuredChangesRequired
+		}
+	case AnalysisStatusFailed:
+		if message.Error == nil {
+			return message, uuid.Nil, ErrAnalysisResultErrorRequired
+		}
+	default:
+		return message, uuid.Nil, ErrAnalysisResultInvalidStatus
+	}
+
+	return message, messageID, nil
 }
