@@ -99,6 +99,8 @@ func (c *Client) Close() {
 
 	c.closed = true
 
+	hadConnection := c.conn != nil || c.channel != nil || c.publishChannel != nil
+
 	if c.publishChannel != nil {
 		if err := c.publishChannel.Close(); err != nil {
 			c.logger.Error("failed to close RabbitMQ publisher channel", "error", err)
@@ -122,7 +124,9 @@ func (c *Client) Close() {
 	c.publishChannel = nil
 	c.returns = nil
 
-	c.logger.Info("RabbitMQ connection closed")
+	if hadConnection {
+		c.logger.Info("RabbitMQ connection closed")
+	}
 }
 
 func (c *Client) connectLocked() error {

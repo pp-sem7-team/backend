@@ -21,6 +21,10 @@ func (c *Client) Consume(
 	delay := reconnectMinDelay
 
 	for {
+		if err := ctx.Err(); err != nil {
+			return nil
+		}
+
 		sessionStart := time.Now()
 
 		err := c.consumeLoop(ctx, queue, prefetch, handler)
@@ -32,11 +36,19 @@ func (c *Client) Consume(
 			return err
 		}
 
+		if errors.Is(err, errReconnectPending) {
+			if !c.waitReconnect(ctx) {
+				return nil
+			}
+
+			continue
+		}
+
 		if time.Since(sessionStart) >= consumerStableSession {
 			delay = reconnectMinDelay
 		}
 
-		c.logger.Warn("RabbitMQ consumer restarted",
+		c.logger.Warn("RabbitMQ consumer stopped, restarting",
 			"queue", queue,
 			"error", err,
 			"next_delay", delay,
@@ -44,13 +56,30 @@ func (c *Client) Consume(
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		case <-time.After(delay):
 		}
 
 		if delay *= 2; delay > reconnectMaxDelay {
 			delay = reconnectMaxDelay
 		}
+	}
+}
+
+func (c *Client) waitReconnect(ctx context.Context) bool {
+	c.stateMu.Lock()
+	wait := time.Until(c.reconnectAfter)
+	c.stateMu.Unlock()
+
+	if wait < reconnectMinDelay {
+		wait = reconnectMinDelay
+	}
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(wait):
+		return true
 	}
 }
 
