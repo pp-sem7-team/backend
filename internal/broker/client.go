@@ -35,11 +35,15 @@ const (
 	reconnectMaxDelay = 30 * time.Second
 
 	consumerStableSession = reconnectMaxDelay
+
+	amqpHeartbeat   = 10 * time.Second
+	amqpDialTimeout = 5 * time.Second
 )
 
 type Client struct {
-	amqpURL string
-	logger  *slog.Logger
+	amqpURL    string
+	amqpConfig amqp.Config
+	logger     *slog.Logger
 
 	conn           *amqp.Connection
 	channel        *amqp.Channel
@@ -65,7 +69,11 @@ func NewClient(cfg config.RabbitMQConfig, logger *slog.Logger) (*Client, error) 
 
 	c := &Client{
 		amqpURL: u.String(),
-		logger:  logger,
+		amqpConfig: amqp.Config{
+			Heartbeat: amqpHeartbeat,
+			Dial:      amqp.DefaultDial(amqpDialTimeout),
+		},
+		logger: logger,
 	}
 
 	c.stateMu.Lock()
@@ -144,7 +152,7 @@ func (c *Client) connectLocked() error {
 
 	c.resetLocked()
 
-	conn, err := amqp.Dial(c.amqpURL)
+	conn, err := amqp.DialConfig(c.amqpURL, c.amqpConfig)
 	if err != nil {
 		c.logger.Error("failed to dial RabbitMQ", "error", err)
 		c.backoffLocked()
