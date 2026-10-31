@@ -23,6 +23,7 @@ var (
 	errReconnectPending      = errors.New("RabbitMQ reconnect is pending")
 	errPrefetchInvalid       = errors.New("prefetch must be greater than zero")
 	errConsumerChannelClosed = errors.New("RabbitMQ consumer channel closed")
+	errClientClosed          = errors.New("RabbitMQ client is closed")
 )
 
 const (
@@ -50,6 +51,8 @@ type Client struct {
 
 	reconnectDelay time.Duration
 	reconnectAfter time.Time
+
+	closed bool
 }
 
 func NewClient(cfg config.RabbitMQConfig, logger *slog.Logger) (*Client, error) {
@@ -86,7 +89,47 @@ func NewClient(cfg config.RabbitMQConfig, logger *slog.Logger) (*Client, error) 
 	return c, nil
 }
 
+func (c *Client) Close() {
+	c.stateMu.Lock()
+	defer c.stateMu.Unlock()
+
+	if c.closed {
+		return
+	}
+
+	c.closed = true
+
+	if c.publishChannel != nil {
+		if err := c.publishChannel.Close(); err != nil {
+			c.logger.Error("failed to close RabbitMQ publisher channel", "error", err)
+		}
+	}
+
+	if c.channel != nil {
+		if err := c.channel.Close(); err != nil {
+			c.logger.Error("failed to close RabbitMQ channel", "error", err)
+		}
+	}
+
+	if c.conn != nil {
+		if err := c.conn.Close(); err != nil {
+			c.logger.Error("failed to close RabbitMQ connection", "error", err)
+		}
+	}
+
+	c.conn = nil
+	c.channel = nil
+	c.publishChannel = nil
+	c.returns = nil
+
+	c.logger.Info("RabbitMQ connection closed")
+}
+
 func (c *Client) connectLocked() error {
+	if c.closed {
+		return errClientClosed
+	}
+
 	if c.reconnectDelay > 0 && time.Now().Before(c.reconnectAfter) {
 		return errReconnectPending
 	}
@@ -232,30 +275,4 @@ func (c *Client) watchPublishChannelLocked(channel *amqp.Channel) {
 		c.publishChannel = nil
 		c.returns = nil
 	}()
-}
-
-func (c *Client) Close() {
-	c.stateMu.Lock()
-	defer c.stateMu.Unlock()
-
-	if c.publishChannel != nil {
-		if err := c.publishChannel.Close(); err != nil {
-			c.logger.Error("failed to close RabbitMQ publisher channel", "error", err)
-		}
-	}
-
-	if c.channel != nil {
-		if err := c.channel.Close(); err != nil {
-			c.logger.Error("failed to close RabbitMQ channel", "error", err)
-		}
-	}
-
-	if c.conn != nil {
-		if err := c.conn.Close(); err != nil {
-			c.logger.Error("failed to close RabbitMQ connection", "error", err)
-			return
-		}
-	}
-
-	c.logger.Info("RabbitMQ connection closed")
 }

@@ -28,6 +28,10 @@ func (c *Client) Consume(
 			return nil
 		}
 
+		if errors.Is(err, errClientClosed) {
+			return err
+		}
+
 		if time.Since(sessionStart) >= consumerStableSession {
 			delay = reconnectMinDelay
 		}
