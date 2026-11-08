@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -18,6 +19,7 @@ var (
 	ErrAnalysisResultAnalysisIDRequired        = errors.New("analysis result analysis_id is required")
 	ErrAnalysisResultStructuredChangesRequired = errors.New("analysis result structured_changes is required for done status")
 	ErrAnalysisResultErrorRequired             = errors.New("analysis result error is required for failed status")
+	ErrAnalysisResultErrorDetailsRequired      = errors.New("analysis result error code and message must be non-empty")
 	ErrAnalysisResultInvalidStatus             = errors.New("invalid analysis result status")
 )
 
@@ -110,6 +112,9 @@ func parseAnalysisResult(delivery amqp.Delivery) (analysisResultMessage, uuid.UU
 	case AnalysisStatusFailed:
 		if message.Error == nil {
 			return message, uuid.Nil, ErrAnalysisResultErrorRequired
+		}
+		if strings.TrimSpace(message.Error.Code) == "" || strings.TrimSpace(message.Error.Message) == "" {
+			return message, uuid.Nil, ErrAnalysisResultErrorDetailsRequired
 		}
 	default:
 		return message, uuid.Nil, ErrAnalysisResultInvalidStatus
