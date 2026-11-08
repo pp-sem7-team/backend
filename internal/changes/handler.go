@@ -12,6 +12,8 @@ import (
 	"github.com/pp-sem7-team/backend/internal/middleware"
 )
 
+const maxCreateChangeBodyBytes = 1 << 20
+
 type Handler struct {
 	service *Service
 }
@@ -34,6 +36,7 @@ func NewHandler(service *Service) *Handler {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
+// @Failure 413 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /branches/{branch_id}/changes [post]
 func (h *Handler) Create(c *gin.Context) {
@@ -50,8 +53,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	var req CreateChangeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.WriteError(c, http.StatusBadRequest, httpx.ErrorCodeInvalidRequest, "Invalid request body")
+	if !httpx.BindJSON(c, &req, maxCreateChangeBodyBytes) {
 		return
 	}
 
