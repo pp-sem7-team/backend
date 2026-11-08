@@ -169,7 +169,7 @@ type Branch struct {
 type Change struct {
 	ID             uuid.UUID `json:"id"`
 	BranchID       uuid.UUID `json:"branch_id"`
-	SequenceNumber int32     `json:"sequence_number"`
+	SequenceNumber int       `json:"sequence_number"`
 	RawDiff        string    `json:"raw_diff"`
 	CreatedAt      time.Time `json:"created_at"`
 }

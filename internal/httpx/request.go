@@ -10,8 +10,8 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-func BindJSON(c *gin.Context, dst any, maxBytes int64) bool {
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes)
+func BindJSON(c *gin.Context, dst any, maxBytes int) bool {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, int64(maxBytes))
 	decoder := json.NewDecoder(c.Request.Body)
 	if err := decoder.Decode(dst); err != nil {
 		writeJSONError(c, err)

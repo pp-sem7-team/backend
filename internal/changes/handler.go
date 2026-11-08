@@ -119,7 +119,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(c.Request.Context(), userID, branchID, int32(limit), int32(offset))
+	result, err := h.service.List(c.Request.Context(), userID, branchID, limit, offset)
 	if err != nil {
 		if errors.Is(err, ErrBranchNotFound) {
 			httpx.WriteError(c, http.StatusNotFound, httpx.ErrorCodeNotFound, "Branch not found")

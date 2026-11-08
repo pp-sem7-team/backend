@@ -19,7 +19,7 @@ var (
 type Querier interface {
 	CreateWorkspace(ctx context.Context, arg db.CreateWorkspaceParams) (db.CreateWorkspaceRow, error)
 	ListWorkspaces(ctx context.Context, arg db.ListWorkspacesParams) ([]db.ListWorkspacesRow, error)
-	CountWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error)
+	CountWorkspaces(ctx context.Context, userID uuid.UUID) (int, error)
 	GetWorkspace(ctx context.Context, arg db.GetWorkspaceParams) (db.GetWorkspaceRow, error)
 	UpdateWorkspace(ctx context.Context, arg db.UpdateWorkspaceParams) (db.UpdateWorkspaceRow, error)
 	DeleteWorkspace(ctx context.Context, arg db.DeleteWorkspaceParams) (int64, error)
@@ -95,8 +95,8 @@ func (s *Service) Get(
 func (s *Service) List(
 	ctx context.Context,
 	userID uuid.UUID,
-	limit int32,
-	offset int32,
+	limit int,
+	offset int,
 ) (WorkspaceList, error) {
 	rows, err := s.q.ListWorkspaces(ctx, db.ListWorkspacesParams{
 		UserID:     userID,

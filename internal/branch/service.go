@@ -20,7 +20,7 @@ var (
 )
 
 type Querier interface {
-	CountBranches(ctx context.Context, arg db.CountBranchesParams) (int64, error)
+	CountBranches(ctx context.Context, arg db.CountBranchesParams) (int, error)
 	CreateBranch(ctx context.Context, arg db.CreateBranchParams) (db.Branch, error)
 	DeleteBranch(ctx context.Context, arg db.DeleteBranchParams) (int64, error)
 	GetBranch(ctx context.Context, arg db.GetBranchParams) (db.Branch, error)
@@ -102,7 +102,7 @@ func (s *Service) Get(
 func (s *Service) List(
 	ctx context.Context,
 	userID, workspaceID uuid.UUID,
-	limit, offset int32,
+	limit, offset int,
 	status *BranchStatus,
 ) (BranchList, error) {
 	exists, err := s.querier.WorkspaceExists(ctx, db.WorkspaceExistsParams{

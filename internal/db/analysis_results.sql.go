@@ -100,7 +100,7 @@ WHERE status = 'pending'
   AND created_at < now() - ($1::bigint * interval '1 millisecond')
 `
 
-func (q *Queries) FailStalePendingAnalyses(ctx context.Context, timeoutMs int64) (int64, error) {
+func (q *Queries) FailStalePendingAnalyses(ctx context.Context, timeoutMs int) (int64, error) {
 	result, err := q.db.Exec(ctx, failStalePendingAnalyses, timeoutMs)
 	if err != nil {
 		return 0, err

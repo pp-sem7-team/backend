@@ -12,7 +12,7 @@ type CreateChangeRequest struct {
 type ChangeResponse struct {
 	ID             string                 `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	BranchID       string                 `json:"branch_id" example:"550e8400-e29b-41d4-a716-446655440001"`
-	SequenceNumber int32                  `json:"sequence_number" example:"1"`
+	SequenceNumber int                    `json:"sequence_number" example:"1"`
 	Analysis       AnalysisResultResponse `json:"analysis"`
 	// Commit is nil until the commit flow is implemented.
 	Commit    *CommitResponse `json:"commit"`
@@ -40,9 +40,9 @@ type CommitResponse struct {
 
 type ChangeListResponse struct {
 	Items  []ChangeResponse `json:"items"`
-	Limit  int32            `json:"limit"`
-	Offset int32            `json:"offset"`
-	Total  int64            `json:"total"`
+	Limit  int              `json:"limit"`
+	Offset int              `json:"offset"`
+	Total  int              `json:"total"`
 }
 
 func toChangeResponse(change Change) ChangeResponse {

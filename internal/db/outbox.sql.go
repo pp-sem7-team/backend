@@ -42,7 +42,7 @@ WHERE published_at IS NOT NULL
   AND published_at < now() - ($1::bigint * interval '1 millisecond')
 `
 
-func (q *Queries) DeletePublishedOutboxMessages(ctx context.Context, retentionMs int64) (int64, error) {
+func (q *Queries) DeletePublishedOutboxMessages(ctx context.Context, retentionMs int) (int64, error) {
 	result, err := q.db.Exec(ctx, deletePublishedOutboxMessages, retentionMs)
 	if err != nil {
 		return 0, err
@@ -67,7 +67,7 @@ type ListUnpublishedOutboxMessagesRow struct {
 	Payload     json.RawMessage `json:"payload"`
 }
 
-func (q *Queries) ListUnpublishedOutboxMessages(ctx context.Context, batchSize int32) ([]ListUnpublishedOutboxMessagesRow, error) {
+func (q *Queries) ListUnpublishedOutboxMessages(ctx context.Context, batchSize int) ([]ListUnpublishedOutboxMessagesRow, error) {
 	rows, err := q.db.Query(ctx, listUnpublishedOutboxMessages, batchSize)
 	if err != nil {
 		return nil, err

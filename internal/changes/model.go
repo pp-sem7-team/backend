@@ -18,7 +18,7 @@ const (
 type Change struct {
 	ID             uuid.UUID
 	BranchID       uuid.UUID
-	SequenceNumber int32
+	SequenceNumber int
 	Analysis       AnalysisResult
 	CreatedAt      time.Time
 }
@@ -33,7 +33,7 @@ type AnalysisResult struct {
 
 type ChangeList struct {
 	Items  []Change
-	Limit  int32
-	Offset int32
-	Total  int64
+	Limit  int
+	Offset int
+	Total  int
 }

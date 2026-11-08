@@ -26,9 +26,9 @@ type CountChangesByBranchParams struct {
 	UserID   uuid.UUID `json:"user_id"`
 }
 
-func (q *Queries) CountChangesByBranch(ctx context.Context, arg CountChangesByBranchParams) (int64, error) {
+func (q *Queries) CountChangesByBranch(ctx context.Context, arg CountChangesByBranchParams) (int, error) {
 	row := q.db.QueryRow(ctx, countChangesByBranch, arg.BranchID, arg.UserID)
-	var column_1 int64
+	var column_1 int
 	err := row.Scan(&column_1)
 	return column_1, err
 }
@@ -66,7 +66,7 @@ type CreateChangeParams struct {
 type CreateChangeRow struct {
 	ID             uuid.UUID `json:"id"`
 	BranchID       uuid.UUID `json:"branch_id"`
-	SequenceNumber int32     `json:"sequence_number"`
+	SequenceNumber int       `json:"sequence_number"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 
@@ -109,7 +109,7 @@ type GetChangeParams struct {
 type GetChangeRow struct {
 	ID                uuid.UUID        `json:"id"`
 	BranchID          uuid.UUID        `json:"branch_id"`
-	SequenceNumber    int32            `json:"sequence_number"`
+	SequenceNumber    int              `json:"sequence_number"`
 	CreatedAt         time.Time        `json:"created_at"`
 	AnalysisID        uuid.UUID        `json:"analysis_id"`
 	StructuredChanges []byte           `json:"structured_changes"`
@@ -160,14 +160,14 @@ OFFSET $3
 type ListChangesByBranchParams struct {
 	BranchID   uuid.UUID `json:"branch_id"`
 	UserID     uuid.UUID `json:"user_id"`
-	PageOffset int32     `json:"page_offset"`
-	PageLimit  int32     `json:"page_limit"`
+	PageOffset int       `json:"page_offset"`
+	PageLimit  int       `json:"page_limit"`
 }
 
 type ListChangesByBranchRow struct {
 	ID                uuid.UUID        `json:"id"`
 	BranchID          uuid.UUID        `json:"branch_id"`
-	SequenceNumber    int32            `json:"sequence_number"`
+	SequenceNumber    int              `json:"sequence_number"`
 	CreatedAt         time.Time        `json:"created_at"`
 	AnalysisID        uuid.UUID        `json:"analysis_id"`
 	StructuredChanges []byte           `json:"structured_changes"`

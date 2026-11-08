@@ -13,6 +13,14 @@ sql:
         emit_interface: true
         emit_empty_slices: true
         overrides:
+          - db_type: "pg_catalog.int8"
+            go_type: "int"
+          - db_type: "bigint"
+            go_type: "int"
+          - db_type: "pg_catalog.int4"
+            go_type: "int"
+          - db_type: "integer"
+            go_type: "int"
           - db_type: "uuid"
             go_type:
               import: "github.com/google/uuid"

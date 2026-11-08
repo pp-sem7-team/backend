@@ -18,9 +18,9 @@ FROM workspaces
 WHERE user_id = $1
 `
 
-func (q *Queries) CountWorkspaces(ctx context.Context, userID uuid.UUID) (int64, error) {
+func (q *Queries) CountWorkspaces(ctx context.Context, userID uuid.UUID) (int, error) {
 	row := q.db.QueryRow(ctx, countWorkspaces, userID)
-	var count int64
+	var count int
 	err := row.Scan(&count)
 	return count, err
 }
@@ -137,8 +137,8 @@ OFFSET $2::int
 
 type ListWorkspacesParams struct {
 	UserID     uuid.UUID `json:"user_id"`
-	PageOffset int32     `json:"page_offset"`
-	PageLimit  int32     `json:"page_limit"`
+	PageOffset int       `json:"page_offset"`
+	PageLimit  int       `json:"page_limit"`
 }
 
 type ListWorkspacesRow struct {

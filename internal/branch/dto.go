@@ -21,9 +21,9 @@ type UpdateBranchRequest struct {
 }
 type BranchListResponse struct {
 	Items  []BranchResponse `json:"items"`
-	Limit  int32            `json:"limit"`
-	Offset int32            `json:"offset"`
-	Total  int64            `json:"total"`
+	Limit  int              `json:"limit"`
+	Offset int              `json:"offset"`
+	Total  int              `json:"total"`
 }
 
 func toBranchResponse(branch Branch) BranchResponse {
