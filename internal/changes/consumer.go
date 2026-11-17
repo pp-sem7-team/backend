@@ -44,7 +44,7 @@ func (c *AnalysisResultConsumer) Handle(ctx context.Context, delivery amqp.Deliv
 			"error", err,
 		)
 
-		return broker.ErrDiscardMessage
+		return broker.ErrRejectMessage
 	}
 
 	status := AnalysisStatus(message.Status)

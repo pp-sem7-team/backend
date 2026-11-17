@@ -167,19 +167,19 @@ func (c *Client) consumeLoop(
 			}
 
 			if err := handler(ctx, delivery); err != nil {
-				if errors.Is(err, ErrDiscardMessage) {
-					c.logger.Info("RabbitMQ message discarded",
+				if errors.Is(err, ErrRejectMessage) {
+					c.logger.Info("RabbitMQ message rejected without requeue",
 						"queue", queue,
 						"message_id", delivery.MessageId,
 					)
 
-					if ackErr := delivery.Ack(false); ackErr != nil {
-						c.logger.Error("failed to ack RabbitMQ message",
+					if nackErr := delivery.Nack(false, false); nackErr != nil {
+						c.logger.Error("failed to nack RabbitMQ message",
 							"queue", queue,
 							"message_id", delivery.MessageId,
-							"error", ackErr,
+							"error", nackErr,
 						)
-						return ackErr
+						return nackErr
 					}
 
 					continue

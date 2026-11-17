@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	ErrDiscardMessage = errors.New("message must be discarded")
+	ErrRejectMessage = errors.New("message must be rejected without requeue")
 
 	errPublisherReturnClosed = errors.New("RabbitMQ publisher return channel closed")
 	errPublisherNack         = errors.New("RabbitMQ negatively acknowledged message")
