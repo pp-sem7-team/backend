@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -36,14 +37,14 @@ func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessa
 	return err
 }
 
-const deletePublishedOutboxMessages = `-- name: DeletePublishedOutboxMessages :execrows
+const deleteExpiredOutboxMessages = `-- name: DeleteExpiredOutboxMessages :execrows
 DELETE FROM outbox
-WHERE published_at IS NOT NULL
-  AND published_at < now() - ($1::bigint * interval '1 millisecond')
+WHERE published_at < $1::timestamptz
+   OR failed_at < $1::timestamptz
 `
 
-func (q *Queries) DeletePublishedOutboxMessages(ctx context.Context, retentionMs int) (int64, error) {
-	result, err := q.db.Exec(ctx, deletePublishedOutboxMessages, retentionMs)
+func (q *Queries) DeleteExpiredOutboxMessages(ctx context.Context, cutoff time.Time) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredOutboxMessages, cutoff)
 	if err != nil {
 		return 0, err
 	}
@@ -54,17 +55,21 @@ const listUnpublishedOutboxMessages = `-- name: ListUnpublishedOutboxMessages :m
 SELECT
     id,
     message_type,
-    payload
+    payload,
+    attempt_count
 FROM outbox
 WHERE published_at IS NULL
-ORDER BY created_at, id
+  AND failed_at IS NULL
+  AND next_attempt_at <= now()
+ORDER BY next_attempt_at, created_at, id
 LIMIT $1
 `
 
 type ListUnpublishedOutboxMessagesRow struct {
-	ID          uuid.UUID       `json:"id"`
-	MessageType string          `json:"message_type"`
-	Payload     json.RawMessage `json:"payload"`
+	ID           uuid.UUID       `json:"id"`
+	MessageType  string          `json:"message_type"`
+	Payload      json.RawMessage `json:"payload"`
+	AttemptCount int             `json:"attempt_count"`
 }
 
 func (q *Queries) ListUnpublishedOutboxMessages(ctx context.Context, batchSize int) ([]ListUnpublishedOutboxMessagesRow, error) {
@@ -76,7 +81,12 @@ func (q *Queries) ListUnpublishedOutboxMessages(ctx context.Context, batchSize i
 	items := []ListUnpublishedOutboxMessagesRow{}
 	for rows.Next() {
 		var i ListUnpublishedOutboxMessagesRow
-		if err := rows.Scan(&i.ID, &i.MessageType, &i.Payload); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.MessageType,
+			&i.Payload,
+			&i.AttemptCount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -87,11 +97,42 @@ func (q *Queries) ListUnpublishedOutboxMessages(ctx context.Context, batchSize i
 	return items, nil
 }
 
+const markOutboxMessageAttemptFailed = `-- name: MarkOutboxMessageAttemptFailed :exec
+UPDATE outbox
+SET attempt_count = attempt_count + 1,
+    last_error = $1::text,
+    next_attempt_at = $2,
+    failed_at = $3
+WHERE id = $4
+  AND published_at IS NULL
+  AND failed_at IS NULL
+`
+
+type MarkOutboxMessageAttemptFailedParams struct {
+	ErrorMessage  string     `json:"error_message"`
+	NextAttemptAt time.Time  `json:"next_attempt_at"`
+	FailedAt      *time.Time `json:"failed_at"`
+	ID            uuid.UUID  `json:"id"`
+}
+
+func (q *Queries) MarkOutboxMessageAttemptFailed(ctx context.Context, arg MarkOutboxMessageAttemptFailedParams) error {
+	_, err := q.db.Exec(ctx, markOutboxMessageAttemptFailed,
+		arg.ErrorMessage,
+		arg.NextAttemptAt,
+		arg.FailedAt,
+		arg.ID,
+	)
+	return err
+}
+
 const markOutboxMessagePublished = `-- name: MarkOutboxMessagePublished :exec
 UPDATE outbox
-SET published_at = now()
+SET published_at = now(),
+    attempt_count = attempt_count + 1,
+    last_error = NULL
 WHERE id = $1
   AND published_at IS NULL
+  AND failed_at IS NULL
 `
 
 func (q *Queries) MarkOutboxMessagePublished(ctx context.Context, id uuid.UUID) error {

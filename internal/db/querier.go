@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -24,8 +25,8 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (CreateWorkspaceRow, error)
 	DeleteBranch(ctx context.Context, arg DeleteBranchParams) (int64, error)
+	DeleteExpiredOutboxMessages(ctx context.Context, cutoff time.Time) (int64, error)
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
-	DeletePublishedOutboxMessages(ctx context.Context, retentionMs int) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
 	FailStalePendingAnalyses(ctx context.Context, timeoutMs int) (int64, error)
@@ -41,6 +42,7 @@ type Querier interface {
 	ListUnpublishedOutboxMessages(ctx context.Context, batchSize int) ([]ListUnpublishedOutboxMessagesRow, error)
 	ListWorkspaces(ctx context.Context, arg ListWorkspacesParams) ([]ListWorkspacesRow, error)
 	LockBranchForChange(ctx context.Context, arg LockBranchForChangeParams) (LockBranchForChangeRow, error)
+	MarkOutboxMessageAttemptFailed(ctx context.Context, arg MarkOutboxMessageAttemptFailedParams) error
 	MarkOutboxMessagePublished(ctx context.Context, id uuid.UUID) error
 	RotateRefreshToken(ctx context.Context, arg RotateRefreshTokenParams) (int64, error)
 	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)

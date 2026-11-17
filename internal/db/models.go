@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type BranchStatus string
@@ -188,11 +187,15 @@ type Commit struct {
 }
 
 type Outbox struct {
-	ID          uuid.UUID          `json:"id"`
-	Payload     json.RawMessage    `json:"payload"`
-	CreatedAt   time.Time          `json:"created_at"`
-	PublishedAt pgtype.Timestamptz `json:"published_at"`
-	MessageType string             `json:"message_type"`
+	ID            uuid.UUID       `json:"id"`
+	Payload       json.RawMessage `json:"payload"`
+	CreatedAt     time.Time       `json:"created_at"`
+	PublishedAt   *time.Time      `json:"published_at"`
+	MessageType   string          `json:"message_type"`
+	AttemptCount  int             `json:"attempt_count"`
+	NextAttemptAt time.Time       `json:"next_attempt_at"`
+	FailedAt      *time.Time      `json:"failed_at"`
+	LastError     *string         `json:"last_error"`
 }
 
 type PullRequest struct {
