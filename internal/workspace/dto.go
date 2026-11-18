@@ -19,9 +19,9 @@ type RenameWorkspaceRequest struct {
 
 type WorkspaceListResponse struct {
 	Items  []WorkspaceResponse `json:"items"`
-	Limit  int32               `json:"limit" example:"10"`
-	Offset int32               `json:"offset" example:"0"`
-	Total  int64               `json:"total" example:"25"`
+	Limit  int                 `json:"limit" example:"10"`
+	Offset int                 `json:"offset" example:"0"`
+	Total  int                 `json:"total" example:"25"`
 }
 
 func toWorkspaceResponse(workspace Workspace) WorkspaceResponse {

@@ -7,19 +7,22 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/pp-sem7-team/backend/internal/db"
+	"github.com/pp-sem7-team/backend/internal/postgres/db"
 )
 
 const (
-	pollInterval    = time.Second
-	cleanupInterval = time.Hour
-	batchSize       = int32(10)
+	pollInterval      = time.Second
+	cleanupInterval   = time.Hour
+	batchSize         = 10
+	maxAttempts       = 5
+	initialRetryDelay = 5 * time.Second
 )
 
 type Querier interface {
-	DeletePublishedOutboxMessages(ctx context.Context, retentionMs int64) (int64, error)
-	ListUnpublishedOutboxMessages(ctx context.Context, batchSize int32) ([]db.ListUnpublishedOutboxMessagesRow, error)
+	DeleteExpiredOutboxMessages(ctx context.Context, cutoff time.Time) (int64, error)
+	ListUnpublishedOutboxMessages(ctx context.Context, batchSize int) ([]db.ListUnpublishedOutboxMessagesRow, error)
 	MarkOutboxMessagePublished(ctx context.Context, id uuid.UUID) error
+	MarkOutboxMessageAttemptFailed(ctx context.Context, arg db.MarkOutboxMessageAttemptFailedParams) error
 }
 
 type Publisher interface {
@@ -69,17 +72,27 @@ func (w *Worker) processBatch(ctx context.Context) {
 	}
 
 	for _, message := range messages {
+		if ctx.Err() != nil {
+			return
+		}
+
 		if err := w.publisher.PublishCommand(
 			ctx,
 			message.MessageType,
 			message.ID.String(),
 			message.Payload,
 		); err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+
 			w.log.Error("failed to publish outbox message",
 				"error", err,
 				"outbox_id", message.ID,
 				"message_type", message.MessageType,
+				"attempt", message.AttemptCount+1,
 			)
+			w.recordPublishFailure(ctx, message, err)
 			continue
 		}
 
@@ -98,14 +111,54 @@ func (w *Worker) processBatch(ctx context.Context) {
 	}
 }
 
+func (w *Worker) recordPublishFailure(ctx context.Context, message db.ListUnpublishedOutboxMessagesRow, publishErr error) {
+	attempt := message.AttemptCount + 1
+	now := time.Now()
+	nextAttemptAt := now
+	var failedAt *time.Time
+	if attempt >= maxAttempts {
+		failedAt = &now
+	} else {
+		delay := initialRetryDelay * time.Duration(1<<(attempt-1))
+		nextAttemptAt = now.Add(delay)
+	}
+
+	if err := w.querier.MarkOutboxMessageAttemptFailed(ctx, db.MarkOutboxMessageAttemptFailedParams{
+		ID:            message.ID,
+		ErrorMessage:  publishErr.Error(),
+		NextAttemptAt: nextAttemptAt,
+		FailedAt:      failedAt,
+	}); err != nil {
+		w.log.Error("failed to record outbox publication failure",
+			"error", err,
+			"outbox_id", message.ID,
+		)
+		return
+	}
+
+	if failedAt != nil {
+		w.log.Error("outbox publication attempts exhausted",
+			"outbox_id", message.ID,
+			"attempt", attempt,
+		)
+	} else {
+		w.log.Info("outbox publication retry scheduled",
+			"outbox_id", message.ID,
+			"attempt", attempt,
+			"next_attempt_at", nextAttemptAt,
+		)
+	}
+}
+
 func (w *Worker) cleanup(ctx context.Context) {
-	deleted, err := w.querier.DeletePublishedOutboxMessages(ctx, w.retention.Milliseconds())
+	cutoff := time.Now().Add(-w.retention)
+	deleted, err := w.querier.DeleteExpiredOutboxMessages(ctx, cutoff)
 	if err != nil {
-		w.log.Error("failed to delete published outbox messages", "error", err)
+		w.log.Error("failed to delete expired outbox messages", "error", err)
 		return
 	}
 
 	if deleted > 0 {
-		w.log.Info("deleted published outbox messages", "count", deleted)
+		w.log.Info("deleted expired outbox messages", "count", deleted)
 	}
 }

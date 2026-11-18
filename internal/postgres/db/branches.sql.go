@@ -51,9 +51,9 @@ type CountBranchesParams struct {
 	Status      *BranchStatus `json:"status"`
 }
 
-func (q *Queries) CountBranches(ctx context.Context, arg CountBranchesParams) (int64, error) {
+func (q *Queries) CountBranches(ctx context.Context, arg CountBranchesParams) (int, error) {
 	row := q.db.QueryRow(ctx, countBranches, arg.WorkspaceID, arg.UserID, arg.Status)
-	var count int64
+	var count int
 	err := row.Scan(&count)
 	return count, err
 }
@@ -185,8 +185,8 @@ type ListBranchesParams struct {
 	WorkspaceID uuid.UUID     `json:"workspace_id"`
 	UserID      uuid.UUID     `json:"user_id"`
 	Status      *BranchStatus `json:"status"`
-	PageOffset  int32         `json:"page_offset"`
-	PageLimit   int32         `json:"page_limit"`
+	PageOffset  int           `json:"page_offset"`
+	PageLimit   int           `json:"page_limit"`
 }
 
 func (q *Queries) ListBranches(ctx context.Context, arg ListBranchesParams) ([]Branch, error) {

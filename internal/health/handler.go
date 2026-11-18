@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pp-sem7-team/backend/internal/db"
 	"github.com/pp-sem7-team/backend/internal/httpx"
+	"github.com/pp-sem7-team/backend/internal/postgres"
 )
 
 type HealthHandler struct {
-	db *db.DB
+	db *postgres.DB
 }
 
-func NewHealthHandler(database *db.DB) *HealthHandler {
+func NewHealthHandler(database *postgres.DB) *HealthHandler {
 	return &HealthHandler{
 		db: database,
 	}

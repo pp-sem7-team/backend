@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/pp-sem7-team/backend/internal/db"
+	"github.com/pp-sem7-team/backend/internal/postgres/db"
 	"github.com/pp-sem7-team/backend/internal/security"
 )
 

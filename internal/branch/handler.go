@@ -123,7 +123,7 @@ func (h *Handler) List(c *gin.Context) {
 		status = &parsed
 	}
 
-	result, err := h.service.List(c.Request.Context(), userID, workspaceID, int32(limit), int32(offset), status)
+	result, err := h.service.List(c.Request.Context(), userID, workspaceID, limit, offset, status)
 	if err != nil {
 		if errors.Is(err, ErrWorkspaceNotFound) {
 			httpx.WriteError(c, http.StatusNotFound, httpx.ErrorCodeNotFound, "Workspace not found")

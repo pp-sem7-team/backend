@@ -11,7 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/pp-sem7-team/backend/internal/db"
+	"github.com/pp-sem7-team/backend/internal/postgres"
+	"github.com/pp-sem7-team/backend/internal/postgres/db"
 )
 
 const analysisRequestMessageType = "analysis.request"
@@ -26,11 +27,11 @@ var (
 type Querier interface {
 	ApplyAnalysisResult(ctx context.Context, arg db.ApplyAnalysisResultParams) (int64, error)
 	BranchExists(ctx context.Context, arg db.BranchExistsParams) (bool, error)
-	CountChangesByBranch(ctx context.Context, arg db.CountChangesByBranchParams) (int64, error)
+	CountChangesByBranch(ctx context.Context, arg db.CountChangesByBranchParams) (int, error)
 	CreateAnalysisResult(ctx context.Context, arg db.CreateAnalysisResultParams) (db.CreateAnalysisResultRow, error)
 	CreateChange(ctx context.Context, arg db.CreateChangeParams) (db.CreateChangeRow, error)
 	CreateOutboxMessage(ctx context.Context, arg db.CreateOutboxMessageParams) error
-	FailStalePendingAnalyses(ctx context.Context, timeoutMs int64) (int64, error)
+	FailStalePendingAnalyses(ctx context.Context, timeoutMs int) (int64, error)
 	GetChange(ctx context.Context, arg db.GetChangeParams) (db.GetChangeRow, error)
 	ListChangesByBranch(ctx context.Context, arg db.ListChangesByBranchParams) ([]db.ListChangesByBranchRow, error)
 	LockBranchForChange(ctx context.Context, arg db.LockBranchForChangeParams) (db.LockBranchForChangeRow, error)
@@ -38,12 +39,12 @@ type Querier interface {
 }
 
 type Service struct {
-	database *db.DB
+	database *postgres.DB
 	querier  Querier
 	log      *slog.Logger
 }
 
-func NewService(database *db.DB, querier Querier, log *slog.Logger) *Service {
+func NewService(database *postgres.DB, querier Querier, log *slog.Logger) *Service {
 	return &Service{
 		database: database,
 		querier:  querier,
@@ -218,7 +219,7 @@ func (s *Service) Get(
 func (s *Service) List(
 	ctx context.Context,
 	userID, branchID uuid.UUID,
-	limit, offset int32,
+	limit, offset int,
 ) (ChangeList, error) {
 	exists, err := s.querier.BranchExists(ctx, db.BranchExistsParams{
 		BranchID: branchID,
@@ -314,7 +315,7 @@ func (s *Service) ApplyAnalysisResult(
 }
 
 func (s *Service) failStaleAnalyses(ctx context.Context, timeout time.Duration) {
-	rowsAffected, err := s.querier.FailStalePendingAnalyses(ctx, timeout.Milliseconds())
+	rowsAffected, err := s.querier.FailStalePendingAnalyses(ctx, int(timeout.Milliseconds()))
 	if err != nil {
 		s.log.Error("failed to fail stale analyses", "error", err)
 		return

@@ -24,7 +24,7 @@ type Branch struct {
 
 type BranchList struct {
 	Items  []Branch
-	Limit  int32
-	Offset int32
-	Total  int64
+	Limit  int
+	Offset int
+	Total  int
 }

@@ -92,7 +92,7 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(c.Request.Context(), userID, int32(limit), int32(offset))
+	result, err := h.service.List(c.Request.Context(), userID, limit, offset)
 	if err != nil {
 		httpx.WriteError(c, http.StatusInternalServerError, httpx.ErrorCodeInternalError, "Failed to list workspaces")
 		return
