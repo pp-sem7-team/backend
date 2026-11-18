@@ -20,6 +20,7 @@ type Querier interface {
 	CreateAnalysisResult(ctx context.Context, arg CreateAnalysisResultParams) (CreateAnalysisResultRow, error)
 	CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error)
 	CreateChange(ctx context.Context, arg CreateChangeParams) (CreateChangeRow, error)
+	CreateCommit(ctx context.Context, arg CreateCommitParams) (CreateCommitRow, error)
 	CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessageParams) error
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error

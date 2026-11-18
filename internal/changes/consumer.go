@@ -12,6 +12,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/pp-sem7-team/backend/internal/broker"
+	"github.com/pp-sem7-team/backend/internal/generation"
 )
 
 var (
@@ -47,9 +48,9 @@ func (c *AnalysisResultConsumer) Handle(ctx context.Context, delivery amqp.Deliv
 		return broker.ErrRejectMessage
 	}
 
-	status := AnalysisStatus(message.Status)
+	status := generation.Status(message.Status)
 
-	if status == AnalysisStatusFailed {
+	if status == generation.Failed {
 		c.log.Warn("analysis generation failed",
 			"analysis_id", message.AnalysisID,
 			"message_id", messageID,
@@ -102,14 +103,14 @@ func parseAnalysisResult(delivery amqp.Delivery) (analysisResultMessage, uuid.UU
 		return message, uuid.Nil, ErrAnalysisResultAnalysisIDRequired
 	}
 
-	switch status := AnalysisStatus(message.Status); status {
-	case AnalysisStatusDone:
+	switch status := generation.Status(message.Status); status {
+	case generation.Done:
 		if len(message.StructuredChanges) == 0 ||
 			!json.Valid(message.StructuredChanges) ||
 			bytes.Equal(bytes.TrimSpace(message.StructuredChanges), []byte("null")) {
 			return message, uuid.Nil, ErrAnalysisResultStructuredChangesRequired
 		}
-	case AnalysisStatusFailed:
+	case generation.Failed:
 		if message.Error == nil {
 			return message, uuid.Nil, ErrAnalysisResultErrorRequired
 		}

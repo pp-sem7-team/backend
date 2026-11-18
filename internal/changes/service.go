@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/pp-sem7-team/backend/internal/commit"
+	"github.com/pp-sem7-team/backend/internal/generation"
 	"github.com/pp-sem7-team/backend/internal/postgres"
 	"github.com/pp-sem7-team/backend/internal/postgres/db"
 )
@@ -99,7 +101,9 @@ func (s *Service) Create(
 
 	changeID := uuid.New()
 	analysisID := uuid.New()
-	outboxID := uuid.New()
+	commitID := uuid.New()
+	analysisMessageID := uuid.New()
+	commitMessageID := uuid.New()
 
 	changeRow, err := querier.CreateChange(ctx, db.CreateChangeParams{
 		ID:       changeID,
@@ -119,7 +123,7 @@ func (s *Service) Create(
 	analysisRow, err := querier.CreateAnalysisResult(ctx, db.CreateAnalysisResultParams{
 		ID:        analysisID,
 		ChangeID:  changeID,
-		MessageID: outboxID,
+		MessageID: analysisMessageID,
 	})
 	if err != nil {
 		s.log.Error("failed to create analysis result",
@@ -130,7 +134,19 @@ func (s *Service) Create(
 		return Change{}, err
 	}
 
-	// TODO: create a pending commit here when the commit flow is implemented.
+	commitRow, err := querier.CreateCommit(ctx, db.CreateCommitParams{
+		ID:        commitID,
+		ChangeID:  changeID,
+		MessageID: commitMessageID,
+	})
+	if err != nil {
+		s.log.Error("failed to create commit",
+			"error", err,
+			"change_id", changeID,
+		)
+		return Change{}, err
+	}
+
 	payload, err := json.Marshal(analysisRequestPayload{
 		AnalysisID: analysisID,
 		RawDiff:    rawDiff,
@@ -144,7 +160,7 @@ func (s *Service) Create(
 	}
 
 	err = querier.CreateOutboxMessage(ctx, db.CreateOutboxMessageParams{
-		ID:          outboxID,
+		ID:          analysisMessageID,
 		MessageType: analysisRequestMessageType,
 		Payload:     payload,
 	})
@@ -152,7 +168,7 @@ func (s *Service) Create(
 		s.log.Error("failed to create analysis outbox message",
 			"error", err,
 			"analysis_id", analysisID,
-			"outbox_id", outboxID,
+			"outbox_id", analysisMessageID,
 		)
 		return Change{}, err
 	}
@@ -172,9 +188,15 @@ func (s *Service) Create(
 		Analysis: AnalysisResult{
 			ID:                analysisRow.ID,
 			StructuredChanges: json.RawMessage(analysisRow.StructuredChanges),
-			Status:            AnalysisStatus(analysisRow.Status),
+			Status:            generation.Status(analysisRow.Status),
 			CreatedAt:         analysisRow.CreatedAt,
 			UpdatedAt:         analysisRow.UpdatedAt,
+		},
+		Commit: &commit.Commit{
+			ID:        commitRow.ID,
+			Status:    generation.Status(commitRow.Status),
+			CreatedAt: commitRow.CreatedAt,
+			UpdatedAt: commitRow.UpdatedAt,
 		},
 		CreatedAt: changeRow.CreatedAt,
 	}, nil
@@ -208,7 +230,7 @@ func (s *Service) Get(
 		Analysis: AnalysisResult{
 			ID:                row.AnalysisID,
 			StructuredChanges: json.RawMessage(row.StructuredChanges),
-			Status:            AnalysisStatus(row.AnalysisStatus),
+			Status:            generation.Status(row.AnalysisStatus),
 			CreatedAt:         row.AnalysisCreatedAt,
 			UpdatedAt:         row.AnalysisUpdatedAt,
 		},
@@ -274,7 +296,7 @@ func (s *Service) List(
 			Analysis: AnalysisResult{
 				ID:                row.AnalysisID,
 				StructuredChanges: json.RawMessage(row.StructuredChanges),
-				Status:            AnalysisStatus(row.AnalysisStatus),
+				Status:            generation.Status(row.AnalysisStatus),
 				CreatedAt:         row.AnalysisCreatedAt,
 				UpdatedAt:         row.AnalysisUpdatedAt,
 			},
@@ -293,7 +315,7 @@ func (s *Service) List(
 func (s *Service) ApplyAnalysisResult(
 	ctx context.Context,
 	analysisID, messageID uuid.UUID,
-	status AnalysisStatus,
+	status generation.Status,
 	structuredChanges json.RawMessage,
 ) (bool, error) {
 	rowsAffected, err := s.querier.ApplyAnalysisResult(ctx, db.ApplyAnalysisResultParams{

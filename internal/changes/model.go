@@ -5,14 +5,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-)
 
-type AnalysisStatus string
-
-const (
-	AnalysisStatusPending AnalysisStatus = "pending"
-	AnalysisStatusDone    AnalysisStatus = "done"
-	AnalysisStatusFailed  AnalysisStatus = "failed"
+	"github.com/pp-sem7-team/backend/internal/commit"
+	"github.com/pp-sem7-team/backend/internal/generation"
 )
 
 type Change struct {
@@ -20,13 +15,14 @@ type Change struct {
 	BranchID       uuid.UUID
 	SequenceNumber int
 	Analysis       AnalysisResult
+	Commit         *commit.Commit
 	CreatedAt      time.Time
 }
 
 type AnalysisResult struct {
 	ID                uuid.UUID
 	StructuredChanges json.RawMessage
-	Status            AnalysisStatus
+	Status            generation.Status
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

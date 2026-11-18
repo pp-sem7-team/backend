@@ -1356,7 +1356,7 @@ const docTemplate = `{
                 "status": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/changes.AnalysisStatus"
+                            "$ref": "#/definitions/generation.Status"
                         }
                     ],
                     "example": "pending"
@@ -1369,19 +1369,6 @@ const docTemplate = `{
                     "example": "2026-01-01T12:00:00Z"
                 }
             }
-        },
-        "changes.AnalysisStatus": {
-            "type": "string",
-            "enum": [
-                "pending",
-                "done",
-                "failed"
-            ],
-            "x-enum-varnames": [
-                "AnalysisStatusPending",
-                "AnalysisStatusDone",
-                "AnalysisStatusFailed"
-            ]
         },
         "changes.ChangeListResponse": {
             "type": "object",
@@ -1414,12 +1401,7 @@ const docTemplate = `{
                     "example": "550e8400-e29b-41d4-a716-446655440001"
                 },
                 "commit": {
-                    "description": "Commit is nil until the commit flow is implemented.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/changes.CommitResponse"
-                        }
-                    ]
+                    "$ref": "#/definitions/commit.CommitResponse"
                 },
                 "created_at": {
                     "type": "string",
@@ -1435,7 +1417,19 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.CommitResponse": {
+        "changes.CreateChangeRequest": {
+            "type": "object",
+            "required": [
+                "raw_diff"
+            ],
+            "properties": {
+                "raw_diff": {
+                    "type": "string",
+                    "example": "diff --git a/main.go b/main.go"
+                }
+            }
+        },
+        "commit.CommitResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1461,7 +1455,7 @@ const docTemplate = `{
                 "status": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/changes.AnalysisStatus"
+                            "$ref": "#/definitions/generation.Status"
                         }
                     ],
                     "example": "pending"
@@ -1476,17 +1470,18 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.CreateChangeRequest": {
-            "type": "object",
-            "required": [
-                "raw_diff"
+        "generation.Status": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "done",
+                "failed"
             ],
-            "properties": {
-                "raw_diff": {
-                    "type": "string",
-                    "example": "diff --git a/main.go b/main.go"
-                }
-            }
+            "x-enum-varnames": [
+                "Pending",
+                "Done",
+                "Failed"
+            ]
         },
         "httpx.Error": {
             "type": "object",
