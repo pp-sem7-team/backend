@@ -17,9 +17,10 @@ import (
 	"github.com/pp-sem7-team/backend/internal/changes"
 	"github.com/pp-sem7-team/backend/internal/cleanup"
 	"github.com/pp-sem7-team/backend/internal/config"
-	"github.com/pp-sem7-team/backend/internal/db"
 	"github.com/pp-sem7-team/backend/internal/logger"
 	"github.com/pp-sem7-team/backend/internal/outbox"
+	"github.com/pp-sem7-team/backend/internal/postgres"
+	"github.com/pp-sem7-team/backend/internal/postgres/db"
 )
 
 const analysisResultPrefetch = 10
@@ -35,7 +36,7 @@ func Run() error {
 
 	ctx := context.Background()
 
-	database, err := db.NewDB(ctx, cfg.Postgres, log)
+	database, err := postgres.NewDB(ctx, cfg.Postgres, log)
 	if err != nil {
 		return err
 	}

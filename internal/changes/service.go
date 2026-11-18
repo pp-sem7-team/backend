@@ -11,7 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/pp-sem7-team/backend/internal/db"
+	"github.com/pp-sem7-team/backend/internal/postgres"
+	"github.com/pp-sem7-team/backend/internal/postgres/db"
 )
 
 const analysisRequestMessageType = "analysis.request"
@@ -38,12 +39,12 @@ type Querier interface {
 }
 
 type Service struct {
-	database *db.DB
+	database *postgres.DB
 	querier  Querier
 	log      *slog.Logger
 }
 
-func NewService(database *db.DB, querier Querier, log *slog.Logger) *Service {
+func NewService(database *postgres.DB, querier Querier, log *slog.Logger) *Service {
 	return &Service{
 		database: database,
 		querier:  querier,

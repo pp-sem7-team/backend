@@ -10,7 +10,7 @@ COPY --from=builder /go/bin/goose /usr/local/bin/goose
 
 WORKDIR /app
 
-COPY internal/db/migrations ./migrations
+COPY migrations ./migrations
 
 ENTRYPOINT ["goose", "-dir", "/app/migrations"]
 CMD ["up"]

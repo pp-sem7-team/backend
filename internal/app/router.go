@@ -13,15 +13,16 @@ import (
 	"github.com/pp-sem7-team/backend/internal/auth"
 	"github.com/pp-sem7-team/backend/internal/branch"
 	"github.com/pp-sem7-team/backend/internal/changes"
-	"github.com/pp-sem7-team/backend/internal/db"
 	"github.com/pp-sem7-team/backend/internal/health"
 	"github.com/pp-sem7-team/backend/internal/middleware"
+	"github.com/pp-sem7-team/backend/internal/postgres"
+	"github.com/pp-sem7-team/backend/internal/postgres/db"
 	"github.com/pp-sem7-team/backend/internal/user"
 	"github.com/pp-sem7-team/backend/internal/workspace"
 )
 
 func NewRouter(
-	database *db.DB,
+	database *postgres.DB,
 	querier *db.Queries,
 	tokenManager *auth.JWTTokenManager,
 	changesService *changes.Service,

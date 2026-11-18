@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/pp-sem7-team/backend/internal/db"
+	"github.com/pp-sem7-team/backend/internal/postgres/db"
 )
 
 const (
