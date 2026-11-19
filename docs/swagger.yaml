@@ -355,6 +355,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -379,6 +383,10 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
@@ -415,6 +423,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -447,6 +459,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
           description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
@@ -562,6 +578,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
           description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
@@ -882,6 +902,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -960,6 +984,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
           description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
@@ -1079,6 +1107,10 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -1182,6 +1214,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
           description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":

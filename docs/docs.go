@@ -58,6 +58,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -94,6 +100,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -150,6 +162,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -198,6 +216,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -380,6 +404,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -876,6 +906,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -995,6 +1031,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -1181,6 +1223,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1336,6 +1384,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }

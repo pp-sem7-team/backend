@@ -12,8 +12,6 @@ import (
 	"github.com/pp-sem7-team/backend/internal/middleware"
 )
 
-const maxEditCommitBodyBytes = 16 * 1024
-
 type Handler struct {
 	service *Service
 }
@@ -96,7 +94,7 @@ func (h *Handler) EditCommit(c *gin.Context) {
 	}
 
 	var req EditCommitRequest
-	if !httpx.BindJSON(c, &req, maxEditCommitBodyBytes) {
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 	if !req.Type.IsValid() || strings.TrimSpace(req.Message) == "" {

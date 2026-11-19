@@ -33,6 +33,7 @@ func NewHandler(service *Service) *Handler {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
+// @Failure 413 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /workspaces/{workspace_id}/branches [post]
 func (h *Handler) Create(c *gin.Context) {
@@ -49,8 +50,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	var req CreateBranchRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.WriteError(c, http.StatusBadRequest, httpx.ErrorCodeInvalidRequest, "Invalid request body")
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -191,6 +191,7 @@ func (h *Handler) Get(c *gin.Context) {
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 404 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
+// @Failure 413 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /branches/{branch_id} [patch]
 func (h *Handler) Update(c *gin.Context) {
@@ -207,8 +208,7 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 
 	var req UpdateBranchRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.WriteError(c, http.StatusBadRequest, httpx.ErrorCodeInvalidRequest, "Invalid request body")
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
