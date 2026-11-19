@@ -8,7 +8,7 @@ import (
 
 type CommitResponse struct {
 	ID             string            `json:"id" example:"550e8400-e29b-41d4-a716-446655440003"`
-	Type           *string           `json:"type" example:"feat"`
+	Type           *CommitType       `json:"type" example:"feat"`
 	Scope          *string           `json:"scope" example:"api"`
 	Message        *string           `json:"message" example:"add changes endpoint"`
 	IsEditedByUser bool              `json:"is_edited_by_user" example:"false"`

@@ -1461,7 +1461,11 @@ const docTemplate = `{
                     "example": "pending"
                 },
                 "type": {
-                    "type": "string",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/commit.CommitType"
+                        }
+                    ],
                     "example": "feat"
                 },
                 "updated_at": {
@@ -1469,6 +1473,29 @@ const docTemplate = `{
                     "example": "2026-01-01T12:00:00Z"
                 }
             }
+        },
+        "commit.CommitType": {
+            "type": "string",
+            "enum": [
+                "feat",
+                "fix",
+                "refactor",
+                "perf",
+                "docs",
+                "test",
+                "style",
+                "chore"
+            ],
+            "x-enum-varnames": [
+                "CommitTypeFeat",
+                "CommitTypeFix",
+                "CommitTypeRefactor",
+                "CommitTypePerf",
+                "CommitTypeDocs",
+                "CommitTypeTest",
+                "CommitTypeStyle",
+                "CommitTypeChore"
+            ]
         },
         "generation.Status": {
             "type": "string",

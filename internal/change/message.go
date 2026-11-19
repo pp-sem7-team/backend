@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+
+	"github.com/pp-sem7-team/backend/internal/generation"
 )
 
 type analysisRequestPayload struct {
@@ -12,13 +14,8 @@ type analysisRequestPayload struct {
 }
 
 type analysisResultMessage struct {
-	AnalysisID        uuid.UUID        `json:"analysis_id"`
-	Status            string           `json:"status"`
-	StructuredChanges json.RawMessage  `json:"structured_changes"`
-	Error             *generationError `json:"error"`
-}
-
-type generationError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	AnalysisID        uuid.UUID         `json:"analysis_id"`
+	Status            string            `json:"status"`
+	StructuredChanges json.RawMessage   `json:"structured_changes"`
+	Error             *generation.Error `json:"error"`
 }

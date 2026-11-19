@@ -16,9 +16,11 @@ import (
 )
 
 var (
-	ErrAnalysisResultCorrelationIDEmpty        = errors.New("analysis result correlation id is empty")
+	ErrAnalysisResultInvalidCorrelationID      = errors.New("invalid analysis result correlation_id")
 	ErrAnalysisResultAnalysisIDRequired        = errors.New("analysis result analysis_id is required")
 	ErrAnalysisResultStructuredChangesRequired = errors.New("analysis result structured_changes is required for done status")
+	ErrAnalysisResultUnexpectedError           = errors.New("successful analysis result must omit error")
+	ErrAnalysisResultUnexpectedChanges         = errors.New("failed analysis result must omit structured_changes")
 	ErrAnalysisResultErrorRequired             = errors.New("analysis result error is required for failed status")
 	ErrAnalysisResultErrorDetailsRequired      = errors.New("analysis result error code and message must be non-empty")
 	ErrAnalysisResultInvalidStatus             = errors.New("invalid analysis result status")
@@ -57,8 +59,6 @@ func (c *AnalysisResultConsumer) Handle(ctx context.Context, delivery amqp.Deliv
 			"error_code", message.Error.Code,
 			"error_message", message.Error.Message,
 		)
-
-		message.StructuredChanges = nil
 	}
 
 	applied, err := c.service.ApplyAnalysisResult(
@@ -86,13 +86,9 @@ func (c *AnalysisResultConsumer) Handle(ctx context.Context, delivery amqp.Deliv
 func parseAnalysisResult(delivery amqp.Delivery) (analysisResultMessage, uuid.UUID, error) {
 	var message analysisResultMessage
 
-	if delivery.CorrelationId == "" {
-		return message, uuid.Nil, ErrAnalysisResultCorrelationIDEmpty
-	}
-
 	messageID, err := uuid.Parse(delivery.CorrelationId)
-	if err != nil {
-		return message, uuid.Nil, err
+	if err != nil || messageID == uuid.Nil {
+		return message, uuid.Nil, ErrAnalysisResultInvalidCorrelationID
 	}
 
 	if err := json.Unmarshal(delivery.Body, &message); err != nil {
@@ -103,14 +99,25 @@ func parseAnalysisResult(delivery amqp.Delivery) (analysisResultMessage, uuid.UU
 		return message, uuid.Nil, ErrAnalysisResultAnalysisIDRequired
 	}
 
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(delivery.Body, &fields); err != nil {
+		return message, uuid.Nil, err
+	}
+
 	switch status := generation.Status(message.Status); status {
 	case generation.Done:
+		if generation.HasField(fields, "error") {
+			return message, uuid.Nil, ErrAnalysisResultUnexpectedError
+		}
 		if len(message.StructuredChanges) == 0 ||
 			!json.Valid(message.StructuredChanges) ||
 			bytes.Equal(bytes.TrimSpace(message.StructuredChanges), []byte("null")) {
 			return message, uuid.Nil, ErrAnalysisResultStructuredChangesRequired
 		}
 	case generation.Failed:
+		if generation.HasField(fields, "structured_changes") {
+			return message, uuid.Nil, ErrAnalysisResultUnexpectedChanges
+		}
 		if message.Error == nil {
 			return message, uuid.Nil, ErrAnalysisResultErrorRequired
 		}

@@ -167,12 +167,33 @@ definitions:
         - $ref: '#/definitions/generation.Status'
         example: pending
       type:
+        allOf:
+        - $ref: '#/definitions/commit.CommitType'
         example: feat
-        type: string
       updated_at:
         example: "2026-01-01T12:00:00Z"
         type: string
     type: object
+  commit.CommitType:
+    enum:
+    - feat
+    - fix
+    - refactor
+    - perf
+    - docs
+    - test
+    - style
+    - chore
+    type: string
+    x-enum-varnames:
+    - CommitTypeFeat
+    - CommitTypeFix
+    - CommitTypeRefactor
+    - CommitTypePerf
+    - CommitTypeDocs
+    - CommitTypeTest
+    - CommitTypeStyle
+    - CommitTypeChore
   generation.Status:
     enum:
     - pending

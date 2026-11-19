@@ -12,6 +12,42 @@ import (
 	"github.com/google/uuid"
 )
 
+const applyCommitResult = `-- name: ApplyCommitResult :execrows
+UPDATE commits
+SET status = $1::generation_status,
+    type = $2::commit_type,
+    scope = $3::text,
+    message = $4::text,
+    updated_at = now()
+WHERE id = $5
+  AND status = 'pending'
+  AND message_id = $6
+`
+
+type ApplyCommitResultParams struct {
+	Status    GenerationStatus `json:"status"`
+	Type      *CommitType      `json:"type"`
+	Scope     *string          `json:"scope"`
+	Message   *string          `json:"message"`
+	CommitID  uuid.UUID        `json:"commit_id"`
+	MessageID uuid.UUID        `json:"message_id"`
+}
+
+func (q *Queries) ApplyCommitResult(ctx context.Context, arg ApplyCommitResultParams) (int64, error) {
+	result, err := q.db.Exec(ctx, applyCommitResult,
+		arg.Status,
+		arg.Type,
+		arg.Scope,
+		arg.Message,
+		arg.CommitID,
+		arg.MessageID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const createCommit = `-- name: CreateCommit :one
 INSERT INTO commits (
     id,
@@ -66,6 +102,25 @@ WHERE change_id = $1
 func (q *Queries) FailPendingCommitByChange(ctx context.Context, changeID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, failPendingCommitByChange, changeID)
 	return err
+}
+
+const failStalePendingCommits = `-- name: FailStalePendingCommits :execrows
+UPDATE commits c
+SET status = 'failed',
+    updated_at = now()
+FROM outbox o
+WHERE c.status = 'pending'
+  AND c.message_id = o.id
+  AND o.message_type = 'commit.request'
+  AND COALESCE(o.published_at, o.created_at) < $1::timestamptz
+`
+
+func (q *Queries) FailStalePendingCommits(ctx context.Context, cutoff time.Time) (int64, error) {
+	result, err := q.db.Exec(ctx, failStalePendingCommits, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getPendingCommitByChange = `-- name: GetPendingCommitByChange :one

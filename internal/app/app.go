@@ -16,6 +16,7 @@ import (
 	"github.com/pp-sem7-team/backend/internal/broker"
 	"github.com/pp-sem7-team/backend/internal/change"
 	"github.com/pp-sem7-team/backend/internal/cleanup"
+	"github.com/pp-sem7-team/backend/internal/commit"
 	"github.com/pp-sem7-team/backend/internal/config"
 	"github.com/pp-sem7-team/backend/internal/logger"
 	"github.com/pp-sem7-team/backend/internal/outbox"
@@ -24,6 +25,7 @@ import (
 )
 
 const analysisResultPrefetch = 10
+const commitResultPrefetch = 10
 
 func Run() error {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
@@ -62,6 +64,8 @@ func Run() error {
 
 	changeService := change.NewService(database, querier, log.With("module", "change"))
 	analysisConsumer := change.NewAnalysisResultConsumer(changeService, log.With("module", "analysis"))
+	commitService := commit.NewService(querier, log.With("module", "commit"))
+	commitConsumer := commit.NewCommitResultConsumer(commitService, log.With("module", "commit"))
 	outboxWorker := outbox.NewWorker(
 		querier,
 		brokerClient,
@@ -69,7 +73,7 @@ func Run() error {
 		log.With("module", "outbox"),
 	)
 
-	workers.Add(4)
+	workers.Add(6)
 
 	go func() {
 		defer workers.Done()
@@ -83,6 +87,11 @@ func Run() error {
 
 	go func() {
 		defer workers.Done()
+		commitService.RunTimeoutWorker(appCtx, cfg.Generation.Timeout)
+	}()
+
+	go func() {
+		defer workers.Done()
 
 		err := brokerClient.Consume(
 			appCtx,
@@ -92,6 +101,19 @@ func Run() error {
 		)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			log.Error("analysis result consumer stopped", "error", err)
+		}
+	}()
+
+	go func() {
+		defer workers.Done()
+
+		err := brokerClient.Consume(appCtx,
+			broker.CommitResultsQueue,
+			commitResultPrefetch,
+			commitConsumer.Handle,
+		)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			log.Error("commit result consumer stopped", "error", err)
 		}
 	}()
 
