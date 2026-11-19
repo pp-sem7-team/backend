@@ -87,7 +87,7 @@ definitions:
         - $ref: '#/definitions/branch.BranchStatus'
         example: closed
     type: object
-  changes.AnalysisResultResponse:
+  change.AnalysisResultResponse:
     properties:
       created_at:
         example: "2026-01-01T12:00:00Z"
@@ -105,11 +105,11 @@ definitions:
         example: "2026-01-01T12:00:00Z"
         type: string
     type: object
-  changes.ChangeListResponse:
+  change.ChangeListResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/changes.ChangeResponse'
+          $ref: '#/definitions/change.ChangeResponse'
         type: array
       limit:
         type: integer
@@ -118,10 +118,10 @@ definitions:
       total:
         type: integer
     type: object
-  changes.ChangeResponse:
+  change.ChangeResponse:
     properties:
       analysis:
-        $ref: '#/definitions/changes.AnalysisResultResponse'
+        $ref: '#/definitions/change.AnalysisResultResponse'
       branch_id:
         example: 550e8400-e29b-41d4-a716-446655440001
         type: string
@@ -137,7 +137,7 @@ definitions:
         example: 1
         type: integer
     type: object
-  changes.CreateChangeRequest:
+  change.CreateChangeRequest:
     properties:
       raw_diff:
         example: diff --git a/main.go b/main.go
@@ -563,7 +563,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/changes.ChangeListResponse'
+            $ref: '#/definitions/change.ChangeListResponse'
         "400":
           description: Bad Request
           schema:
@@ -601,14 +601,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/changes.CreateChangeRequest'
+          $ref: '#/definitions/change.CreateChangeRequest'
       produces:
       - application/json
       responses:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/changes.ChangeResponse'
+            $ref: '#/definitions/change.ChangeResponse'
         "400":
           description: Bad Request
           schema:
@@ -653,7 +653,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/changes.ChangeResponse'
+            $ref: '#/definitions/change.ChangeResponse'
         "400":
           description: Bad Request
           schema:

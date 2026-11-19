@@ -438,7 +438,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/changes.ChangeListResponse"
+                            "$ref": "#/definitions/change.ChangeListResponse"
                         }
                     },
                     "400": {
@@ -498,7 +498,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/changes.CreateChangeRequest"
+                            "$ref": "#/definitions/change.CreateChangeRequest"
                         }
                     }
                 ],
@@ -506,7 +506,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/changes.ChangeResponse"
+                            "$ref": "#/definitions/change.ChangeResponse"
                         }
                     },
                     "400": {
@@ -576,7 +576,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/changes.ChangeResponse"
+                            "$ref": "#/definitions/change.ChangeResponse"
                         }
                     },
                     "400": {
@@ -1342,7 +1342,7 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.AnalysisResultResponse": {
+        "change.AnalysisResultResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1370,13 +1370,13 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.ChangeListResponse": {
+        "change.ChangeListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/changes.ChangeResponse"
+                        "$ref": "#/definitions/change.ChangeResponse"
                     }
                 },
                 "limit": {
@@ -1390,11 +1390,11 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.ChangeResponse": {
+        "change.ChangeResponse": {
             "type": "object",
             "properties": {
                 "analysis": {
-                    "$ref": "#/definitions/changes.AnalysisResultResponse"
+                    "$ref": "#/definitions/change.AnalysisResultResponse"
                 },
                 "branch_id": {
                     "type": "string",
@@ -1417,7 +1417,7 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.CreateChangeRequest": {
+        "change.CreateChangeRequest": {
             "type": "object",
             "required": [
                 "raw_diff"

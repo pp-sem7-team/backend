@@ -14,7 +14,7 @@ import (
 
 	"github.com/pp-sem7-team/backend/internal/auth"
 	"github.com/pp-sem7-team/backend/internal/broker"
-	"github.com/pp-sem7-team/backend/internal/changes"
+	"github.com/pp-sem7-team/backend/internal/change"
 	"github.com/pp-sem7-team/backend/internal/cleanup"
 	"github.com/pp-sem7-team/backend/internal/config"
 	"github.com/pp-sem7-team/backend/internal/logger"
@@ -60,8 +60,8 @@ func Run() error {
 
 	var workers sync.WaitGroup
 
-	changesService := changes.NewService(database, querier, log.With("module", "changes"))
-	analysisConsumer := changes.NewAnalysisResultConsumer(changesService, log.With("module", "analysis"))
+	changeService := change.NewService(database, querier, log.With("module", "change"))
+	analysisConsumer := change.NewAnalysisResultConsumer(changeService, log.With("module", "analysis"))
 	outboxWorker := outbox.NewWorker(
 		querier,
 		brokerClient,
@@ -78,7 +78,7 @@ func Run() error {
 
 	go func() {
 		defer workers.Done()
-		changesService.RunTimeoutWorker(appCtx, cfg.Generation.Timeout)
+		changeService.RunTimeoutWorker(appCtx, cfg.Generation.Timeout)
 	}()
 
 	go func() {
@@ -100,7 +100,7 @@ func Run() error {
 		cleanup.RefreshTokens(appCtx, querier, log)
 	}()
 
-	router := NewRouter(database, querier, tokenManager, changesService, log)
+	router := NewRouter(database, querier, tokenManager, changeService, log)
 
 	server := &http.Server{
 		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,

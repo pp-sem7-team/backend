@@ -12,7 +12,7 @@ import (
 
 	"github.com/pp-sem7-team/backend/internal/auth"
 	"github.com/pp-sem7-team/backend/internal/branch"
-	"github.com/pp-sem7-team/backend/internal/changes"
+	"github.com/pp-sem7-team/backend/internal/change"
 	"github.com/pp-sem7-team/backend/internal/health"
 	"github.com/pp-sem7-team/backend/internal/middleware"
 	"github.com/pp-sem7-team/backend/internal/postgres"
@@ -25,7 +25,7 @@ func NewRouter(
 	database *postgres.DB,
 	querier *db.Queries,
 	tokenManager *auth.JWTTokenManager,
-	changesService *changes.Service,
+	changeService *change.Service,
 	log *slog.Logger,
 ) http.Handler {
 	router := gin.New()
@@ -46,7 +46,7 @@ func NewRouter(
 	branchService := branch.NewService(querier, log.With("module", "branch"))
 	branchHandler := branch.NewHandler(branchService)
 
-	changesHandler := changes.NewHandler(changesService)
+	changeHandler := change.NewHandler(changeService)
 
 	router.GET("/health", healthHandler.Health)
 	router.GET("/health/db", healthHandler.HealthDB)
@@ -84,9 +84,9 @@ func NewRouter(
 		branches.GET("/branches/:branch_id", branchHandler.Get)
 		branches.PATCH("/branches/:branch_id", branchHandler.Update)
 		branches.DELETE("/branches/:branch_id", branchHandler.Delete)
-		branches.POST("/branches/:branch_id/changes", changesHandler.Create)
-		branches.GET("/branches/:branch_id/changes", changesHandler.List)
-		branches.GET("/changes/:change_id", changesHandler.Get)
+		branches.POST("/branches/:branch_id/changes", changeHandler.Create)
+		branches.GET("/branches/:branch_id/changes", changeHandler.List)
+		branches.GET("/changes/:change_id", changeHandler.Get)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
