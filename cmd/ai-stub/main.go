@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,13 +21,16 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/joho/godotenv"
+	"github.com/pp-sem7-team/backend/internal/generation"
 	"github.com/pp-sem7-team/backend/internal/logger"
 )
 
 const (
 	analysisRequestsQueue = "generation.analysis.requests"
+	commitRequestsQueue   = "generation.commit.requests"
 	resultsExchange       = "generation.results"
 	analysisResultKey     = "analysis.result"
+	commitResultKey       = "commit.result"
 	prefetch              = 1
 	retryDelay            = 2 * time.Second
 )
@@ -39,15 +43,24 @@ type analysisRequest struct {
 }
 
 type analysisResult struct {
-	AnalysisID        uuid.UUID        `json:"analysis_id"`
-	Status            string           `json:"status"`
-	StructuredChanges json.RawMessage  `json:"structured_changes,omitempty"`
-	Error             *generationError `json:"error,omitempty"`
+	AnalysisID        uuid.UUID         `json:"analysis_id"`
+	Status            string            `json:"status"`
+	StructuredChanges json.RawMessage   `json:"structured_changes,omitempty"`
+	Error             *generation.Error `json:"error,omitempty"`
 }
 
-type generationError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+type commitRequest struct {
+	CommitID          uuid.UUID       `json:"commit_id"`
+	StructuredChanges json.RawMessage `json:"structured_changes"`
+}
+
+type commitResult struct {
+	CommitID uuid.UUID         `json:"commit_id"`
+	Status   string            `json:"status"`
+	Type     string            `json:"type,omitempty"`
+	Scope    json.RawMessage   `json:"scope,omitempty"`
+	Message  string            `json:"message,omitempty"`
+	Error    *generation.Error `json:"error,omitempty"`
 }
 
 type structuredChanges struct {
@@ -192,48 +205,54 @@ func (s *stub) run(ctx context.Context, cfg rabbitMQConfig) error {
 		return fmt.Errorf("configure consumer QoS: %w", err)
 	}
 
-	deliveries, err := consumeCh.Consume(
-		analysisRequestsQueue,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
+	analysisDeliveries, err := consumeCh.Consume(analysisRequestsQueue, "", false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("consume %s: %w", analysisRequestsQueue, err)
 	}
 
-	s.log.Info("ai stub connected", "queue", analysisRequestsQueue)
+	commitDeliveries, err := consumeCh.Consume(commitRequestsQueue, "", false, false, false, false, nil)
+	if err != nil {
+		return fmt.Errorf("consume %s: %w", commitRequestsQueue, err)
+	}
+
+	returns := publishCh.NotifyReturn(make(chan amqp.Return, 1))
+	s.log.Info("ai stub connected",
+		"analysis_queue", analysisRequestsQueue,
+		"commit_queue", commitRequestsQueue,
+	)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case delivery, ok := <-deliveries:
+		case delivery, ok := <-analysisDeliveries:
 			if !ok {
-				return errors.New("RabbitMQ deliveries channel closed")
+				return errors.New("analysis deliveries channel closed")
 			}
-
-			s.handleDelivery(ctx, publishCh, delivery)
+			s.handleDelivery(ctx, publishCh, returns, delivery, analysisResultKey)
+		case delivery, ok := <-commitDeliveries:
+			if !ok {
+				return errors.New("commit deliveries channel closed")
+			}
+			s.handleDelivery(ctx, publishCh, returns, delivery, commitResultKey)
 		}
 	}
 }
 
-func (s *stub) handleDelivery(ctx context.Context, ch *amqp.Channel, delivery amqp.Delivery) {
-	if err := s.process(ctx, ch, delivery); err != nil {
+func (s *stub) handleDelivery(ctx context.Context, ch *amqp.Channel, returns <-chan amqp.Return, delivery amqp.Delivery, resultKey string) {
+	if err := s.process(ctx, ch, returns, delivery, resultKey); err != nil {
 		requeue := !errors.Is(err, errPermanent)
 
-		s.log.Error("failed to process analysis request",
+		s.log.Error("failed to process generation request",
 			"error", err,
+			"result_type", resultKey,
 			"requeue", requeue,
 			"message_id", delivery.MessageId,
 			"correlation_id", delivery.CorrelationId,
 		)
 
 		if nackErr := delivery.Nack(false, requeue); nackErr != nil {
-			s.log.Error("failed to nack analysis request",
+			s.log.Error("failed to nack generation request",
 				"error", nackErr,
 				"message_id", delivery.MessageId,
 			)
@@ -242,66 +261,40 @@ func (s *stub) handleDelivery(ctx context.Context, ch *amqp.Channel, delivery am
 	}
 
 	if err := delivery.Ack(false); err != nil {
-		s.log.Error("failed to ack analysis request",
+		s.log.Error("failed to ack generation request",
 			"error", err,
 			"message_id", delivery.MessageId,
 		)
 	}
 }
 
-func (s *stub) process(ctx context.Context, ch *amqp.Channel, delivery amqp.Delivery) error {
-	if delivery.CorrelationId == "" {
-		return fmt.Errorf("%w: correlation id is empty", errPermanent)
+func (s *stub) process(ctx context.Context, ch *amqp.Channel, returns <-chan amqp.Return, delivery amqp.Delivery, resultKey string) error {
+	messageID, err := uuid.Parse(delivery.CorrelationId)
+	if err != nil || messageID == uuid.Nil || delivery.CorrelationId != delivery.MessageId {
+		return fmt.Errorf("%w: invalid request correlation id", errPermanent)
 	}
 
-	if _, err := uuid.Parse(delivery.CorrelationId); err != nil {
-		return fmt.Errorf("%w: invalid correlation id: %v", errPermanent, err)
+	status := s.nextStatus()
+	var body []byte
+	switch resultKey {
+	case analysisResultKey:
+		body, err = makeAnalysisResult(delivery.Body, status)
+	case commitResultKey:
+		body, err = makeCommitResult(delivery.Body, status)
 	}
-
-	var request analysisRequest
-	if err := json.Unmarshal(delivery.Body, &request); err != nil {
-		return fmt.Errorf("%w: invalid payload: %v", errPermanent, err)
-	}
-
-	if request.AnalysisID == uuid.Nil {
-		return fmt.Errorf("%w: analysis_id is required", errPermanent)
+	if err != nil {
+		return err
 	}
 
 	if err := s.wait(ctx); err != nil {
 		return err
 	}
 
-	status := s.nextStatus()
-	result := analysisResult{
-		AnalysisID: request.AnalysisID,
-		Status:     status,
-	}
-
-	if status == "done" {
-		structured, err := json.Marshal(structuredChanges{
-			Summary: "stub analysis result",
-			Files:   []string{"main.go"},
-		})
-		if err != nil {
-			return err
-		}
-		result.StructuredChanges = structured
-	} else {
-		result.Error = &generationError{
-			Code:    "STUB_FAILURE",
-			Message: "simulated analysis failure",
-		}
-	}
-
-	body, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-
-	confirmation, err := ch.PublishWithDeferredConfirm(
+	confirmation, err := ch.PublishWithDeferredConfirmWithContext(
+		ctx,
 		resultsExchange,
-		analysisResultKey,
-		false,
+		resultKey,
+		true,
 		false,
 		amqp.Publishing{
 			ContentType:     "application/json",
@@ -309,14 +302,14 @@ func (s *stub) process(ctx context.Context, ch *amqp.Channel, delivery amqp.Deli
 			DeliveryMode:    amqp.Persistent,
 			MessageId:       uuid.NewString(),
 			CorrelationId:   delivery.CorrelationId,
-			Type:            analysisResultKey,
+			Type:            resultKey,
 			Timestamp:       time.Now(),
-			AppId:           "ai-stub",
+			AppId:           "ai-service",
 			Body:            body,
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("publish analysis result: %w", err)
+		return fmt.Errorf("publish generation result: %w", err)
 	}
 
 	if confirmation == nil {
@@ -329,17 +322,83 @@ func (s *stub) process(ctx context.Context, ch *amqp.Channel, delivery amqp.Deli
 	}
 
 	if !acked {
-		return errors.New("analysis result publish was nacked")
+		return errors.New("generation result publish was nacked")
 	}
 
-	s.log.Info("analysis result published",
-		"analysis_id", request.AnalysisID,
+	select {
+	case returned, ok := <-returns:
+		if !ok {
+			return errors.New("publisher return channel closed")
+		}
+		return fmt.Errorf("generation result could not be routed: %s", returned.ReplyText)
+	default:
+	}
+
+	s.log.Info("generation result published",
+		"result_type", resultKey,
 		"status", status,
 		"correlation_id", delivery.CorrelationId,
-		"raw_diff_bytes", len(request.RawDiff),
 	)
 
 	return nil
+}
+
+func makeAnalysisResult(body []byte, status string) ([]byte, error) {
+	var request analysisRequest
+	if err := json.Unmarshal(body, &request); err != nil {
+		return nil, fmt.Errorf("%w: invalid payload: %v", errPermanent, err)
+	}
+	if request.AnalysisID == uuid.Nil || strings.TrimSpace(request.RawDiff) == "" {
+		return nil, fmt.Errorf("%w: analysis_id and raw_diff are required", errPermanent)
+	}
+
+	result := analysisResult{
+		AnalysisID: request.AnalysisID,
+		Status:     status,
+	}
+	if status == "done" {
+		structured, err := json.Marshal(structuredChanges{
+			Summary: "stub analysis result",
+			Files:   []string{"main.go"},
+		})
+		if err != nil {
+			return nil, err
+		}
+		result.StructuredChanges = structured
+	} else {
+		result.Error = &generation.Error{
+			Code:    "internal_error",
+			Message: "simulated analysis failure",
+		}
+	}
+	return json.Marshal(result)
+}
+
+func makeCommitResult(body []byte, status string) ([]byte, error) {
+	var request commitRequest
+	if err := json.Unmarshal(body, &request); err != nil {
+		return nil, fmt.Errorf("%w: invalid payload: %v", errPermanent, err)
+	}
+	if request.CommitID == uuid.Nil || len(request.StructuredChanges) == 0 ||
+		bytes.Equal(bytes.TrimSpace(request.StructuredChanges), []byte("null")) {
+		return nil, fmt.Errorf("%w: commit_id and structured_changes are required", errPermanent)
+	}
+
+	result := commitResult{
+		CommitID: request.CommitID,
+		Status:   status,
+	}
+	if status == "done" {
+		result.Type = "chore"
+		result.Scope = json.RawMessage("null")
+		result.Message = "update project files"
+	} else {
+		result.Error = &generation.Error{
+			Code:    "internal_error",
+			Message: "simulated commit generation failure",
+		}
+	}
+	return json.Marshal(result)
 }
 
 func (s *stub) wait(ctx context.Context) error {

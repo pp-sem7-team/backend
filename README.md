@@ -165,10 +165,11 @@ docker compose up --build
 
 ### Заглушка AI-сервиса
 
-`cmd/ai-stub` заменяет AI-сервис при локальной разработке: получает сообщения
-`analysis.request` из RabbitMQ и отправляет тестовые `analysis.result` со
-статусом `done` или `failed`. Настройки подключения к RabbitMQ берутся из
-`.env`. Запустите в отдельном терминале:
+`cmd/ai-stub` заменяет AI-сервис при локальной разработке. Получает
+`analysis.request` и `commit.request` из RabbitMQ и отправляет соответствующие
+`analysis.result` и `commit.result` со статусом `done` или `failed`.
+Заглушка подключается к RabbitMQ на `localhost`. Порт и учётные данные
+берутся из окружения и `.env`. Запустите в отдельном терминале:
 ```bash
 go run ./cmd/ai-stub
 ```
