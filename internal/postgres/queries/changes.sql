@@ -42,11 +42,20 @@ SELECT
     ar.structured_changes,
     ar.status AS analysis_status,
     ar.created_at AS analysis_created_at,
-    ar.updated_at AS analysis_updated_at
+    ar.updated_at AS analysis_updated_at,
+    cm.id AS commit_id,
+    cm.type AS commit_type,
+    cm.scope AS commit_scope,
+    cm.message AS commit_message,
+    cm.is_edited_by_user AS commit_is_edited_by_user,
+    cm.status AS commit_status,
+    cm.created_at AS commit_created_at,
+    cm.updated_at AS commit_updated_at
 FROM changes c
 JOIN branches b ON b.id = c.branch_id
 JOIN workspaces w ON w.id = b.workspace_id
 JOIN analysis_results ar ON ar.change_id = c.id
+JOIN commits cm ON cm.change_id = c.id
 WHERE c.id = sqlc.arg(id)
   AND w.user_id = sqlc.arg(user_id);
 
@@ -60,11 +69,20 @@ SELECT
     ar.structured_changes,
     ar.status AS analysis_status,
     ar.created_at AS analysis_created_at,
-    ar.updated_at AS analysis_updated_at
+    ar.updated_at AS analysis_updated_at,
+    cm.id AS commit_id,
+    cm.type AS commit_type,
+    cm.scope AS commit_scope,
+    cm.message AS commit_message,
+    cm.is_edited_by_user AS commit_is_edited_by_user,
+    cm.status AS commit_status,
+    cm.created_at AS commit_created_at,
+    cm.updated_at AS commit_updated_at
 FROM changes c
 JOIN branches b ON b.id = c.branch_id
 JOIN workspaces w ON w.id = b.workspace_id
 JOIN analysis_results ar ON ar.change_id = c.id
+JOIN commits cm ON cm.change_id = c.id
 WHERE b.id = sqlc.arg(branch_id)
   AND w.user_id = sqlc.arg(user_id)
 ORDER BY c.sequence_number ASC

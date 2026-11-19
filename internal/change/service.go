@@ -233,6 +233,16 @@ func (s *Service) Get(
 			CreatedAt:         row.AnalysisCreatedAt,
 			UpdatedAt:         row.AnalysisUpdatedAt,
 		},
+		Commit: &commit.Commit{
+			ID:             row.CommitID,
+			Type:           (*commit.CommitType)(row.CommitType),
+			Scope:          row.CommitScope,
+			Message:        row.CommitMessage,
+			IsEditedByUser: row.CommitIsEditedByUser,
+			Status:         generation.Status(row.CommitStatus),
+			CreatedAt:      row.CommitCreatedAt,
+			UpdatedAt:      row.CommitUpdatedAt,
+		},
 		CreatedAt: row.CreatedAt,
 	}, nil
 }
@@ -298,6 +308,16 @@ func (s *Service) List(
 				Status:            generation.Status(row.AnalysisStatus),
 				CreatedAt:         row.AnalysisCreatedAt,
 				UpdatedAt:         row.AnalysisUpdatedAt,
+			},
+			Commit: &commit.Commit{
+				ID:             row.CommitID,
+				Type:           (*commit.CommitType)(row.CommitType),
+				Scope:          row.CommitScope,
+				Message:        row.CommitMessage,
+				IsEditedByUser: row.CommitIsEditedByUser,
+				Status:         generation.Status(row.CommitStatus),
+				CreatedAt:      row.CommitCreatedAt,
+				UpdatedAt:      row.CommitUpdatedAt,
 			},
 			CreatedAt: row.CreatedAt,
 		})
