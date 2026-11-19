@@ -27,13 +27,12 @@ var (
 )
 
 type Querier interface {
-	ApplyAnalysisResult(ctx context.Context, arg db.ApplyAnalysisResultParams) (int64, error)
 	BranchExists(ctx context.Context, arg db.BranchExistsParams) (bool, error)
 	CountChangesByBranch(ctx context.Context, arg db.CountChangesByBranchParams) (int, error)
 	CreateAnalysisResult(ctx context.Context, arg db.CreateAnalysisResultParams) (db.CreateAnalysisResultRow, error)
 	CreateChange(ctx context.Context, arg db.CreateChangeParams) (db.CreateChangeRow, error)
 	CreateOutboxMessage(ctx context.Context, arg db.CreateOutboxMessageParams) error
-	FailStalePendingAnalyses(ctx context.Context, timeoutMs int) (int64, error)
+	FailStalePendingAnalyses(ctx context.Context, cutoff time.Time) (int, error)
 	GetChange(ctx context.Context, arg db.GetChangeParams) (db.GetChangeRow, error)
 	ListChangesByBranch(ctx context.Context, arg db.ListChangesByBranchParams) ([]db.ListChangesByBranchRow, error)
 	LockBranchForChange(ctx context.Context, arg db.LockBranchForChangeParams) (db.LockBranchForChangeRow, error)
@@ -318,14 +317,31 @@ func (s *Service) ApplyAnalysisResult(
 	status generation.Status,
 	structuredChanges json.RawMessage,
 ) (bool, error) {
-	rowsAffected, err := s.querier.ApplyAnalysisResult(ctx, db.ApplyAnalysisResultParams{
+	tx, err := s.database.Pool.Begin(ctx)
+	if err != nil {
+		s.log.Error("failed to begin analysis result transaction",
+			"error", err,
+			"analysis_id", analysisID,
+			"message_id", messageID,
+		)
+		return false, err
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	queries := s.querier.WithTx(tx)
+	changeID, err := queries.ApplyAnalysisResult(ctx, db.ApplyAnalysisResultParams{
 		StructuredChanges: structuredChanges,
 		Status:            db.GenerationStatus(status),
 		AnalysisID:        analysisID,
 		MessageID:         messageID,
 	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
-		s.log.Error("failed to apply analysis result",
+		s.log.Error("failed to update analysis result",
 			"error", err,
 			"analysis_id", analysisID,
 			"message_id", messageID,
@@ -333,17 +349,43 @@ func (s *Service) ApplyAnalysisResult(
 		return false, err
 	}
 
-	return rowsAffected > 0, nil
-}
-
-func (s *Service) failStaleAnalyses(ctx context.Context, timeout time.Duration) {
-	rowsAffected, err := s.querier.FailStalePendingAnalyses(ctx, int(timeout.Milliseconds()))
-	if err != nil {
-		s.log.Error("failed to fail stale analyses", "error", err)
-		return
+	if status == generation.Failed {
+		if err := queries.FailPendingCommitByChange(ctx, changeID); err != nil {
+			s.log.Error("failed to fail pending commit",
+				"error", err,
+				"analysis_id", analysisID,
+				"message_id", messageID,
+			)
+			return false, err
+		}
+	} else {
+		pending, err := queries.GetPendingCommitByChange(ctx, changeID)
+		if err != nil {
+			s.log.Error("failed to get pending commit",
+				"error", err,
+				"analysis_id", analysisID,
+				"message_id", messageID,
+			)
+			return false, err
+		}
+		if err := commit.EnqueueRequest(ctx, queries, pending.ID, pending.MessageID, structuredChanges); err != nil {
+			s.log.Error("failed to enqueue commit request",
+				"error", err,
+				"analysis_id", analysisID,
+				"message_id", messageID,
+			)
+			return false, err
+		}
 	}
 
-	if rowsAffected > 0 {
-		s.log.Info("marked stale analyses as failed", "count", rowsAffected)
+	if err := tx.Commit(ctx); err != nil {
+		s.log.Error("failed to commit analysis result transaction",
+			"error", err,
+			"analysis_id", analysisID,
+			"message_id", messageID,
+		)
+		return false, err
 	}
+
+	return true, nil
 }

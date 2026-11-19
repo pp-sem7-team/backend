@@ -18,7 +18,7 @@ RETURNING
     created_at,
     updated_at;
 
--- name: ApplyAnalysisResult :execrows
+-- name: ApplyAnalysisResult :one
 UPDATE analysis_results ar
 SET
     structured_changes = sqlc.narg(structured_changes)::jsonb,
@@ -26,12 +26,22 @@ SET
     updated_at = now()
 WHERE ar.id = sqlc.arg(analysis_id)
   AND ar.status = 'pending'
-  AND ar.message_id = sqlc.arg(message_id);
+  AND ar.message_id = sqlc.arg(message_id)
+RETURNING ar.change_id;
 
--- name: FailStalePendingAnalyses :execrows
-UPDATE analysis_results
-SET
-    status = 'failed',
-    updated_at = now()
-WHERE status = 'pending'
-  AND created_at < now() - (sqlc.arg(timeout_ms)::bigint * interval '1 millisecond');
+-- name: FailStalePendingAnalyses :one
+WITH stale_analyses AS (
+    UPDATE analysis_results
+    SET status = 'failed',
+        updated_at = now()
+    WHERE status = 'pending'
+      AND created_at < sqlc.arg(cutoff)::timestamptz
+    RETURNING change_id
+), failed_commits AS (
+    UPDATE commits
+    SET status = 'failed',
+        updated_at = now()
+    WHERE status = 'pending'
+      AND change_id IN (SELECT change_id FROM stale_analyses)
+)
+SELECT COUNT(*)::bigint FROM stale_analyses;

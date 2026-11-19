@@ -54,3 +54,35 @@ func (q *Queries) CreateCommit(ctx context.Context, arg CreateCommitParams) (Cre
 	)
 	return i, err
 }
+
+const failPendingCommitByChange = `-- name: FailPendingCommitByChange :exec
+UPDATE commits
+SET status = 'failed',
+    updated_at = now()
+WHERE change_id = $1
+  AND status = 'pending'
+`
+
+func (q *Queries) FailPendingCommitByChange(ctx context.Context, changeID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, failPendingCommitByChange, changeID)
+	return err
+}
+
+const getPendingCommitByChange = `-- name: GetPendingCommitByChange :one
+SELECT id, message_id
+FROM commits
+WHERE change_id = $1
+  AND status = 'pending'
+`
+
+type GetPendingCommitByChangeRow struct {
+	ID        uuid.UUID `json:"id"`
+	MessageID uuid.UUID `json:"message_id"`
+}
+
+func (q *Queries) GetPendingCommitByChange(ctx context.Context, changeID uuid.UUID) (GetPendingCommitByChangeRow, error) {
+	row := q.db.QueryRow(ctx, getPendingCommitByChange, changeID)
+	var i GetPendingCommitByChangeRow
+	err := row.Scan(&i.ID, &i.MessageID)
+	return i, err
+}

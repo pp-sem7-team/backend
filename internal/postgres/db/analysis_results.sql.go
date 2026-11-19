@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const applyAnalysisResult = `-- name: ApplyAnalysisResult :execrows
+const applyAnalysisResult = `-- name: ApplyAnalysisResult :one
 UPDATE analysis_results ar
 SET
     structured_changes = $1::jsonb,
@@ -21,6 +21,7 @@ SET
 WHERE ar.id = $3
   AND ar.status = 'pending'
   AND ar.message_id = $4
+RETURNING ar.change_id
 `
 
 type ApplyAnalysisResultParams struct {
@@ -30,17 +31,16 @@ type ApplyAnalysisResultParams struct {
 	MessageID         uuid.UUID        `json:"message_id"`
 }
 
-func (q *Queries) ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (int64, error) {
-	result, err := q.db.Exec(ctx, applyAnalysisResult,
+func (q *Queries) ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, applyAnalysisResult,
 		arg.StructuredChanges,
 		arg.Status,
 		arg.AnalysisID,
 		arg.MessageID,
 	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	var change_id uuid.UUID
+	err := row.Scan(&change_id)
+	return change_id, err
 }
 
 const createAnalysisResult = `-- name: CreateAnalysisResult :one
@@ -91,19 +91,27 @@ func (q *Queries) CreateAnalysisResult(ctx context.Context, arg CreateAnalysisRe
 	return i, err
 }
 
-const failStalePendingAnalyses = `-- name: FailStalePendingAnalyses :execrows
-UPDATE analysis_results
-SET
-    status = 'failed',
-    updated_at = now()
-WHERE status = 'pending'
-  AND created_at < now() - ($1::bigint * interval '1 millisecond')
+const failStalePendingAnalyses = `-- name: FailStalePendingAnalyses :one
+WITH stale_analyses AS (
+    UPDATE analysis_results
+    SET status = 'failed',
+        updated_at = now()
+    WHERE status = 'pending'
+      AND created_at < $1::timestamptz
+    RETURNING change_id
+), failed_commits AS (
+    UPDATE commits
+    SET status = 'failed',
+        updated_at = now()
+    WHERE status = 'pending'
+      AND change_id IN (SELECT change_id FROM stale_analyses)
+)
+SELECT COUNT(*)::bigint FROM stale_analyses
 `
 
-func (q *Queries) FailStalePendingAnalyses(ctx context.Context, timeoutMs int) (int64, error) {
-	result, err := q.db.Exec(ctx, failStalePendingAnalyses, timeoutMs)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) FailStalePendingAnalyses(ctx context.Context, cutoff time.Time) (int, error) {
+	row := q.db.QueryRow(ctx, failStalePendingAnalyses, cutoff)
+	var column_1 int
+	err := row.Scan(&column_1)
+	return column_1, err
 }

@@ -12,7 +12,7 @@ import (
 )
 
 type Querier interface {
-	ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (int64, error)
+	ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (uuid.UUID, error)
 	BranchExists(ctx context.Context, arg BranchExistsParams) (bool, error)
 	CountBranches(ctx context.Context, arg CountBranchesParams) (int, error)
 	CountChangesByBranch(ctx context.Context, arg CountChangesByBranchParams) (int, error)
@@ -30,9 +30,11 @@ type Querier interface {
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
-	FailStalePendingAnalyses(ctx context.Context, timeoutMs int) (int64, error)
+	FailPendingCommitByChange(ctx context.Context, changeID uuid.UUID) error
+	FailStalePendingAnalyses(ctx context.Context, cutoff time.Time) (int, error)
 	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
 	GetChange(ctx context.Context, arg GetChangeParams) (GetChangeRow, error)
+	GetPendingCommitByChange(ctx context.Context, changeID uuid.UUID) (GetPendingCommitByChangeRow, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (GetUserRow, error)
 	GetUserCredentialsByEmail(ctx context.Context, email string) (GetUserCredentialsByEmailRow, error)
 	GetUserIDByRefreshTokenHash(ctx context.Context, tokenHash string) (uuid.UUID, error)
