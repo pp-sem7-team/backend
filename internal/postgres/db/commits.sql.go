@@ -142,7 +142,7 @@ func (q *Queries) GetPendingCommitByChange(ctx context.Context, changeID uuid.UU
 	return i, err
 }
 
-const lockCommitForRegeneration = `-- name: LockCommitForRegeneration :one
+const lockCommitByChange = `-- name: LockCommitByChange :one
 SELECT
     cm.id,
     cm.status,
@@ -158,21 +158,21 @@ WHERE cm.change_id = $1
 FOR UPDATE OF cm
 `
 
-type LockCommitForRegenerationParams struct {
+type LockCommitByChangeParams struct {
 	ChangeID uuid.UUID `json:"change_id"`
 	UserID   uuid.UUID `json:"user_id"`
 }
 
-type LockCommitForRegenerationRow struct {
+type LockCommitByChangeRow struct {
 	ID                uuid.UUID        `json:"id"`
 	Status            GenerationStatus `json:"status"`
 	AnalysisStatus    GenerationStatus `json:"analysis_status"`
 	StructuredChanges []byte           `json:"structured_changes"`
 }
 
-func (q *Queries) LockCommitForRegeneration(ctx context.Context, arg LockCommitForRegenerationParams) (LockCommitForRegenerationRow, error) {
-	row := q.db.QueryRow(ctx, lockCommitForRegeneration, arg.ChangeID, arg.UserID)
-	var i LockCommitForRegenerationRow
+func (q *Queries) LockCommitByChange(ctx context.Context, arg LockCommitByChangeParams) (LockCommitByChangeRow, error) {
+	row := q.db.QueryRow(ctx, lockCommitByChange, arg.ChangeID, arg.UserID)
+	var i LockCommitByChangeRow
 	err := row.Scan(
 		&i.ID,
 		&i.Status,
@@ -182,7 +182,7 @@ func (q *Queries) LockCommitForRegeneration(ctx context.Context, arg LockCommitF
 	return i, err
 }
 
-const resetCommitForRegeneration = `-- name: ResetCommitForRegeneration :one
+const resetCommit = `-- name: ResetCommit :one
 UPDATE commits
 SET status = 'pending',
     type = NULL,
@@ -195,23 +195,73 @@ WHERE id = $2
 RETURNING id, status, created_at, updated_at
 `
 
-type ResetCommitForRegenerationParams struct {
+type ResetCommitParams struct {
 	MessageID uuid.UUID `json:"message_id"`
 	CommitID  uuid.UUID `json:"commit_id"`
 }
 
-type ResetCommitForRegenerationRow struct {
+type ResetCommitRow struct {
 	ID        uuid.UUID        `json:"id"`
 	Status    GenerationStatus `json:"status"`
 	CreatedAt time.Time        `json:"created_at"`
 	UpdatedAt time.Time        `json:"updated_at"`
 }
 
-func (q *Queries) ResetCommitForRegeneration(ctx context.Context, arg ResetCommitForRegenerationParams) (ResetCommitForRegenerationRow, error) {
-	row := q.db.QueryRow(ctx, resetCommitForRegeneration, arg.MessageID, arg.CommitID)
-	var i ResetCommitForRegenerationRow
+func (q *Queries) ResetCommit(ctx context.Context, arg ResetCommitParams) (ResetCommitRow, error) {
+	row := q.db.QueryRow(ctx, resetCommit, arg.MessageID, arg.CommitID)
+	var i ResetCommitRow
 	err := row.Scan(
 		&i.ID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateCommitMessage = `-- name: UpdateCommitMessage :one
+UPDATE commits
+SET type = $1::commit_type,
+    scope = $2::text,
+    message = $3::text,
+    is_edited_by_user = true,
+    updated_at = now()
+WHERE id = $4
+RETURNING id, type, scope, message, is_edited_by_user, status, created_at, updated_at
+`
+
+type UpdateCommitMessageParams struct {
+	Type     CommitType `json:"type"`
+	Scope    *string    `json:"scope"`
+	Message  string     `json:"message"`
+	CommitID uuid.UUID  `json:"commit_id"`
+}
+
+type UpdateCommitMessageRow struct {
+	ID             uuid.UUID        `json:"id"`
+	Type           *CommitType      `json:"type"`
+	Scope          *string          `json:"scope"`
+	Message        *string          `json:"message"`
+	IsEditedByUser bool             `json:"is_edited_by_user"`
+	Status         GenerationStatus `json:"status"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
+}
+
+func (q *Queries) UpdateCommitMessage(ctx context.Context, arg UpdateCommitMessageParams) (UpdateCommitMessageRow, error) {
+	row := q.db.QueryRow(ctx, updateCommitMessage,
+		arg.Type,
+		arg.Scope,
+		arg.Message,
+		arg.CommitID,
+	)
+	var i UpdateCommitMessageRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.Scope,
+		&i.Message,
+		&i.IsEditedByUser,
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,

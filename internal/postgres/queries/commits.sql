@@ -21,7 +21,7 @@ FROM commits
 WHERE change_id = sqlc.arg(change_id)
   AND status = 'pending';
 
--- name: LockCommitForRegeneration :one
+-- name: LockCommitByChange :one
 SELECT
     cm.id,
     cm.status,
@@ -36,7 +36,7 @@ WHERE cm.change_id = sqlc.arg(change_id)
   AND w.user_id = sqlc.arg(user_id)
 FOR UPDATE OF cm;
 
--- name: ResetCommitForRegeneration :one
+-- name: ResetCommit :one
 UPDATE commits
 SET status = 'pending',
     type = NULL,
@@ -47,6 +47,16 @@ SET status = 'pending',
     updated_at = now()
 WHERE id = sqlc.arg(commit_id)
 RETURNING id, status, created_at, updated_at;
+
+-- name: UpdateCommitMessage :one
+UPDATE commits
+SET type = sqlc.arg(type)::commit_type,
+    scope = sqlc.narg(scope)::text,
+    message = sqlc.arg(message)::text,
+    is_edited_by_user = true,
+    updated_at = now()
+WHERE id = sqlc.arg(commit_id)
+RETURNING id, type, scope, message, is_edited_by_user, status, created_at, updated_at;
 
 -- name: ApplyCommitResult :execrows
 UPDATE commits

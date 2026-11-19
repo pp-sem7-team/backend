@@ -656,6 +656,85 @@
                         }
                     }
                 }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "commits"
+                ],
+                "summary": "Edit a commit message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Change ID",
+                        "name": "change_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Commit message",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commit.EditCommitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/commit.CommitResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/health": {
@@ -1548,6 +1627,32 @@
                 "CommitTypeStyle",
                 "CommitTypeChore"
             ]
+        },
+        "commit.EditCommitRequest": {
+            "type": "object",
+            "required": [
+                "message",
+                "type"
+            ],
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "fix api response"
+                },
+                "scope": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "api"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/commit.CommitType"
+                        }
+                    ],
+                    "example": "fix"
+                }
+            }
         },
         "generation.Status": {
             "type": "string",

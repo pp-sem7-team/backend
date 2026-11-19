@@ -6,6 +6,12 @@ import (
 	"github.com/pp-sem7-team/backend/internal/generation"
 )
 
+type EditCommitRequest struct {
+	Type    CommitType `json:"type" binding:"required" example:"fix"`
+	Scope   *string    `json:"scope" extensions:"x-nullable" example:"api"`
+	Message string     `json:"message" binding:"required" example:"fix api response"`
+}
+
 type CommitResponse struct {
 	ID             string            `json:"id" example:"550e8400-e29b-41d4-a716-446655440003"`
 	Type           *CommitType       `json:"type" example:"feat"`

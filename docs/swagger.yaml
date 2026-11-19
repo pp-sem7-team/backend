@@ -194,6 +194,23 @@ definitions:
     - CommitTypeTest
     - CommitTypeStyle
     - CommitTypeChore
+  commit.EditCommitRequest:
+    properties:
+      message:
+        example: fix api response
+        type: string
+      scope:
+        example: api
+        type: string
+        x-nullable: true
+      type:
+        allOf:
+        - $ref: '#/definitions/commit.CommitType'
+        example: fix
+    required:
+    - message
+    - type
+    type: object
   generation.Status:
     enum:
     - pending
@@ -697,6 +714,57 @@ paths:
       tags:
       - changes
   /changes/{change_id}/commit:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Change ID
+        in: path
+        name: change_id
+        required: true
+        type: string
+      - description: Commit message
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/commit.EditCommitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/commit.CommitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Edit a commit message
+      tags:
+      - commits
     post:
       parameters:
       - description: Change ID

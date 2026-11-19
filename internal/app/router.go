@@ -91,6 +91,7 @@ func NewRouter(
 		branches.GET("/branches/:branch_id/changes", changeHandler.List)
 		branches.GET("/changes/:change_id", changeHandler.Get)
 		branches.POST("/changes/:change_id/commit", commitHandler.RegenerateCommit)
+		branches.PATCH("/changes/:change_id/commit", commitHandler.EditCommit)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
