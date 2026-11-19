@@ -141,3 +141,80 @@ func (q *Queries) GetPendingCommitByChange(ctx context.Context, changeID uuid.UU
 	err := row.Scan(&i.ID, &i.MessageID)
 	return i, err
 }
+
+const lockCommitForRegeneration = `-- name: LockCommitForRegeneration :one
+SELECT
+    cm.id,
+    cm.status,
+    ar.status AS analysis_status,
+    ar.structured_changes
+FROM commits cm
+JOIN changes c ON c.id = cm.change_id
+JOIN branches b ON b.id = c.branch_id
+JOIN workspaces w ON w.id = b.workspace_id
+JOIN analysis_results ar ON ar.change_id = c.id
+WHERE cm.change_id = $1
+  AND w.user_id = $2
+FOR UPDATE OF cm
+`
+
+type LockCommitForRegenerationParams struct {
+	ChangeID uuid.UUID `json:"change_id"`
+	UserID   uuid.UUID `json:"user_id"`
+}
+
+type LockCommitForRegenerationRow struct {
+	ID                uuid.UUID        `json:"id"`
+	Status            GenerationStatus `json:"status"`
+	AnalysisStatus    GenerationStatus `json:"analysis_status"`
+	StructuredChanges []byte           `json:"structured_changes"`
+}
+
+func (q *Queries) LockCommitForRegeneration(ctx context.Context, arg LockCommitForRegenerationParams) (LockCommitForRegenerationRow, error) {
+	row := q.db.QueryRow(ctx, lockCommitForRegeneration, arg.ChangeID, arg.UserID)
+	var i LockCommitForRegenerationRow
+	err := row.Scan(
+		&i.ID,
+		&i.Status,
+		&i.AnalysisStatus,
+		&i.StructuredChanges,
+	)
+	return i, err
+}
+
+const resetCommitForRegeneration = `-- name: ResetCommitForRegeneration :one
+UPDATE commits
+SET status = 'pending',
+    type = NULL,
+    scope = NULL,
+    message = NULL,
+    is_edited_by_user = false,
+    message_id = $1,
+    updated_at = now()
+WHERE id = $2
+RETURNING id, status, created_at, updated_at
+`
+
+type ResetCommitForRegenerationParams struct {
+	MessageID uuid.UUID `json:"message_id"`
+	CommitID  uuid.UUID `json:"commit_id"`
+}
+
+type ResetCommitForRegenerationRow struct {
+	ID        uuid.UUID        `json:"id"`
+	Status    GenerationStatus `json:"status"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
+}
+
+func (q *Queries) ResetCommitForRegeneration(ctx context.Context, arg ResetCommitForRegenerationParams) (ResetCommitForRegenerationRow, error) {
+	row := q.db.QueryRow(ctx, resetCommitForRegeneration, arg.MessageID, arg.CommitID)
+	var i ResetCommitForRegenerationRow
+	err := row.Scan(
+		&i.ID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

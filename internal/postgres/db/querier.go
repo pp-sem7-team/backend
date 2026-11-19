@@ -47,8 +47,10 @@ type Querier interface {
 	ListUnpublishedOutboxMessages(ctx context.Context, batchSize int) ([]ListUnpublishedOutboxMessagesRow, error)
 	ListWorkspaces(ctx context.Context, arg ListWorkspacesParams) ([]ListWorkspacesRow, error)
 	LockBranchForChange(ctx context.Context, arg LockBranchForChangeParams) (LockBranchForChangeRow, error)
+	LockCommitForRegeneration(ctx context.Context, arg LockCommitForRegenerationParams) (LockCommitForRegenerationRow, error)
 	MarkOutboxMessageAttemptFailed(ctx context.Context, arg MarkOutboxMessageAttemptFailedParams) error
 	MarkOutboxMessagePublished(ctx context.Context, id uuid.UUID) error
+	ResetCommitForRegeneration(ctx context.Context, arg ResetCommitForRegenerationParams) (ResetCommitForRegenerationRow, error)
 	RotateRefreshToken(ctx context.Context, arg RotateRefreshTokenParams) (int64, error)
 	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error)

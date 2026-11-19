@@ -64,7 +64,7 @@ func Run() error {
 
 	changeService := change.NewService(database, querier, log.With("module", "change"))
 	analysisConsumer := change.NewAnalysisResultConsumer(changeService, log.With("module", "analysis"))
-	commitService := commit.NewService(querier, log.With("module", "commit"))
+	commitService := commit.NewService(database, querier, log.With("module", "commit"))
 	commitConsumer := commit.NewCommitResultConsumer(commitService, log.With("module", "commit"))
 	outboxWorker := outbox.NewWorker(
 		querier,
@@ -122,7 +122,7 @@ func Run() error {
 		cleanup.RefreshTokens(appCtx, querier, log)
 	}()
 
-	router := NewRouter(database, querier, tokenManager, changeService, log)
+	router := NewRouter(database, querier, tokenManager, changeService, commitService, log)
 
 	server := &http.Server{
 		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,

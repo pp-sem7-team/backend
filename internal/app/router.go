@@ -13,6 +13,7 @@ import (
 	"github.com/pp-sem7-team/backend/internal/auth"
 	"github.com/pp-sem7-team/backend/internal/branch"
 	"github.com/pp-sem7-team/backend/internal/change"
+	"github.com/pp-sem7-team/backend/internal/commit"
 	"github.com/pp-sem7-team/backend/internal/health"
 	"github.com/pp-sem7-team/backend/internal/middleware"
 	"github.com/pp-sem7-team/backend/internal/postgres"
@@ -26,6 +27,7 @@ func NewRouter(
 	querier *db.Queries,
 	tokenManager *auth.JWTTokenManager,
 	changeService *change.Service,
+	commitService *commit.Service,
 	log *slog.Logger,
 ) http.Handler {
 	router := gin.New()
@@ -47,6 +49,7 @@ func NewRouter(
 	branchHandler := branch.NewHandler(branchService)
 
 	changeHandler := change.NewHandler(changeService)
+	commitHandler := commit.NewHandler(commitService)
 
 	router.GET("/health", healthHandler.Health)
 	router.GET("/health/db", healthHandler.HealthDB)
@@ -87,6 +90,7 @@ func NewRouter(
 		branches.POST("/branches/:branch_id/changes", changeHandler.Create)
 		branches.GET("/branches/:branch_id/changes", changeHandler.List)
 		branches.GET("/changes/:change_id", changeHandler.Get)
+		branches.POST("/changes/:change_id/commit", commitHandler.RegenerateCommit)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
