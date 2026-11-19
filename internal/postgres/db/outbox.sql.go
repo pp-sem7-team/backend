@@ -38,9 +38,16 @@ func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessa
 }
 
 const deleteExpiredOutboxMessages = `-- name: DeleteExpiredOutboxMessages :execrows
-DELETE FROM outbox
-WHERE published_at < $1::timestamptz
-   OR failed_at < $1::timestamptz
+DELETE FROM outbox o
+WHERE (o.published_at < $1::timestamptz
+    OR o.failed_at < $1::timestamptz)
+  AND NOT EXISTS (
+      SELECT 1
+      FROM commits c
+      WHERE o.message_type = 'commit.request'
+        AND c.message_id = o.id
+        AND c.status = 'pending'
+  )
 `
 
 func (q *Queries) DeleteExpiredOutboxMessages(ctx context.Context, cutoff time.Time) (int64, error) {

@@ -1,8 +1,11 @@
-package changes
+package change
 
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/pp-sem7-team/backend/internal/commit"
+	"github.com/pp-sem7-team/backend/internal/generation"
 )
 
 type CreateChangeRequest struct {
@@ -14,28 +17,16 @@ type ChangeResponse struct {
 	BranchID       string                 `json:"branch_id" example:"550e8400-e29b-41d4-a716-446655440001"`
 	SequenceNumber int                    `json:"sequence_number" example:"1"`
 	Analysis       AnalysisResultResponse `json:"analysis"`
-	// Commit is nil until the commit flow is implemented.
-	Commit    *CommitResponse `json:"commit"`
-	CreatedAt time.Time       `json:"created_at" example:"2026-01-01T12:00:00Z"`
+	Commit         *commit.CommitResponse `json:"commit"`
+	CreatedAt      time.Time              `json:"created_at" example:"2026-01-01T12:00:00Z"`
 }
 
 type AnalysisResultResponse struct {
-	ID                string          `json:"id" example:"550e8400-e29b-41d4-a716-446655440002"`
-	StructuredChanges json.RawMessage `json:"structured_changes" swaggertype:"object"`
-	Status            AnalysisStatus  `json:"status" example:"pending"`
-	CreatedAt         time.Time       `json:"created_at" example:"2026-01-01T12:00:00Z"`
-	UpdatedAt         time.Time       `json:"updated_at" example:"2026-01-01T12:00:00Z"`
-}
-
-type CommitResponse struct {
-	ID             string         `json:"id" example:"550e8400-e29b-41d4-a716-446655440003"`
-	Type           *string        `json:"type" example:"feat"`
-	Scope          *string        `json:"scope" example:"api"`
-	Message        *string        `json:"message" example:"add changes endpoint"`
-	IsEditedByUser bool           `json:"is_edited_by_user" example:"false"`
-	Status         AnalysisStatus `json:"status" example:"pending"`
-	CreatedAt      time.Time      `json:"created_at" example:"2026-01-01T12:00:00Z"`
-	UpdatedAt      time.Time      `json:"updated_at" example:"2026-01-01T12:00:00Z"`
+	ID                string            `json:"id" example:"550e8400-e29b-41d4-a716-446655440002"`
+	StructuredChanges json.RawMessage   `json:"structured_changes" swaggertype:"object"`
+	Status            generation.Status `json:"status" example:"pending"`
+	CreatedAt         time.Time         `json:"created_at" example:"2026-01-01T12:00:00Z"`
+	UpdatedAt         time.Time         `json:"updated_at" example:"2026-01-01T12:00:00Z"`
 }
 
 type ChangeListResponse struct {
@@ -57,7 +48,7 @@ func toChangeResponse(change Change) ChangeResponse {
 			CreatedAt:         change.Analysis.CreatedAt,
 			UpdatedAt:         change.Analysis.UpdatedAt,
 		},
-		Commit:    nil,
+		Commit:    commit.ToCommitResponse(change.Commit),
 		CreatedAt: change.CreatedAt,
 	}
 }

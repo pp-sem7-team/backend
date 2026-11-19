@@ -81,6 +81,7 @@ func (h *Handler) GetMe(c *gin.Context) {
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Failure 404 {object} httpx.ErrorResponse
+// @Failure 413 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /users/me/password [patch]
 func (h *Handler) ChangePassword(c *gin.Context) {
@@ -96,13 +97,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	}
 
 	var req UpdatePasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.WriteError(
-			c,
-			http.StatusBadRequest,
-			httpx.ErrorCodeInvalidRequest,
-			"Invalid request body",
-		)
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 

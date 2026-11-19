@@ -92,11 +92,20 @@ SELECT
     ar.structured_changes,
     ar.status AS analysis_status,
     ar.created_at AS analysis_created_at,
-    ar.updated_at AS analysis_updated_at
+    ar.updated_at AS analysis_updated_at,
+    cm.id AS commit_id,
+    cm.type AS commit_type,
+    cm.scope AS commit_scope,
+    cm.message AS commit_message,
+    cm.is_edited_by_user AS commit_is_edited_by_user,
+    cm.status AS commit_status,
+    cm.created_at AS commit_created_at,
+    cm.updated_at AS commit_updated_at
 FROM changes c
 JOIN branches b ON b.id = c.branch_id
 JOIN workspaces w ON w.id = b.workspace_id
 JOIN analysis_results ar ON ar.change_id = c.id
+JOIN commits cm ON cm.change_id = c.id
 WHERE c.id = $1
   AND w.user_id = $2
 `
@@ -107,15 +116,23 @@ type GetChangeParams struct {
 }
 
 type GetChangeRow struct {
-	ID                uuid.UUID        `json:"id"`
-	BranchID          uuid.UUID        `json:"branch_id"`
-	SequenceNumber    int              `json:"sequence_number"`
-	CreatedAt         time.Time        `json:"created_at"`
-	AnalysisID        uuid.UUID        `json:"analysis_id"`
-	StructuredChanges []byte           `json:"structured_changes"`
-	AnalysisStatus    GenerationStatus `json:"analysis_status"`
-	AnalysisCreatedAt time.Time        `json:"analysis_created_at"`
-	AnalysisUpdatedAt time.Time        `json:"analysis_updated_at"`
+	ID                   uuid.UUID        `json:"id"`
+	BranchID             uuid.UUID        `json:"branch_id"`
+	SequenceNumber       int              `json:"sequence_number"`
+	CreatedAt            time.Time        `json:"created_at"`
+	AnalysisID           uuid.UUID        `json:"analysis_id"`
+	StructuredChanges    []byte           `json:"structured_changes"`
+	AnalysisStatus       GenerationStatus `json:"analysis_status"`
+	AnalysisCreatedAt    time.Time        `json:"analysis_created_at"`
+	AnalysisUpdatedAt    time.Time        `json:"analysis_updated_at"`
+	CommitID             uuid.UUID        `json:"commit_id"`
+	CommitType           *CommitType      `json:"commit_type"`
+	CommitScope          *string          `json:"commit_scope"`
+	CommitMessage        *string          `json:"commit_message"`
+	CommitIsEditedByUser bool             `json:"commit_is_edited_by_user"`
+	CommitStatus         GenerationStatus `json:"commit_status"`
+	CommitCreatedAt      time.Time        `json:"commit_created_at"`
+	CommitUpdatedAt      time.Time        `json:"commit_updated_at"`
 }
 
 func (q *Queries) GetChange(ctx context.Context, arg GetChangeParams) (GetChangeRow, error) {
@@ -131,6 +148,14 @@ func (q *Queries) GetChange(ctx context.Context, arg GetChangeParams) (GetChange
 		&i.AnalysisStatus,
 		&i.AnalysisCreatedAt,
 		&i.AnalysisUpdatedAt,
+		&i.CommitID,
+		&i.CommitType,
+		&i.CommitScope,
+		&i.CommitMessage,
+		&i.CommitIsEditedByUser,
+		&i.CommitStatus,
+		&i.CommitCreatedAt,
+		&i.CommitUpdatedAt,
 	)
 	return i, err
 }
@@ -145,11 +170,20 @@ SELECT
     ar.structured_changes,
     ar.status AS analysis_status,
     ar.created_at AS analysis_created_at,
-    ar.updated_at AS analysis_updated_at
+    ar.updated_at AS analysis_updated_at,
+    cm.id AS commit_id,
+    cm.type AS commit_type,
+    cm.scope AS commit_scope,
+    cm.message AS commit_message,
+    cm.is_edited_by_user AS commit_is_edited_by_user,
+    cm.status AS commit_status,
+    cm.created_at AS commit_created_at,
+    cm.updated_at AS commit_updated_at
 FROM changes c
 JOIN branches b ON b.id = c.branch_id
 JOIN workspaces w ON w.id = b.workspace_id
 JOIN analysis_results ar ON ar.change_id = c.id
+JOIN commits cm ON cm.change_id = c.id
 WHERE b.id = $1
   AND w.user_id = $2
 ORDER BY c.sequence_number ASC
@@ -165,15 +199,23 @@ type ListChangesByBranchParams struct {
 }
 
 type ListChangesByBranchRow struct {
-	ID                uuid.UUID        `json:"id"`
-	BranchID          uuid.UUID        `json:"branch_id"`
-	SequenceNumber    int              `json:"sequence_number"`
-	CreatedAt         time.Time        `json:"created_at"`
-	AnalysisID        uuid.UUID        `json:"analysis_id"`
-	StructuredChanges []byte           `json:"structured_changes"`
-	AnalysisStatus    GenerationStatus `json:"analysis_status"`
-	AnalysisCreatedAt time.Time        `json:"analysis_created_at"`
-	AnalysisUpdatedAt time.Time        `json:"analysis_updated_at"`
+	ID                   uuid.UUID        `json:"id"`
+	BranchID             uuid.UUID        `json:"branch_id"`
+	SequenceNumber       int              `json:"sequence_number"`
+	CreatedAt            time.Time        `json:"created_at"`
+	AnalysisID           uuid.UUID        `json:"analysis_id"`
+	StructuredChanges    []byte           `json:"structured_changes"`
+	AnalysisStatus       GenerationStatus `json:"analysis_status"`
+	AnalysisCreatedAt    time.Time        `json:"analysis_created_at"`
+	AnalysisUpdatedAt    time.Time        `json:"analysis_updated_at"`
+	CommitID             uuid.UUID        `json:"commit_id"`
+	CommitType           *CommitType      `json:"commit_type"`
+	CommitScope          *string          `json:"commit_scope"`
+	CommitMessage        *string          `json:"commit_message"`
+	CommitIsEditedByUser bool             `json:"commit_is_edited_by_user"`
+	CommitStatus         GenerationStatus `json:"commit_status"`
+	CommitCreatedAt      time.Time        `json:"commit_created_at"`
+	CommitUpdatedAt      time.Time        `json:"commit_updated_at"`
 }
 
 func (q *Queries) ListChangesByBranch(ctx context.Context, arg ListChangesByBranchParams) ([]ListChangesByBranchRow, error) {
@@ -200,6 +242,14 @@ func (q *Queries) ListChangesByBranch(ctx context.Context, arg ListChangesByBran
 			&i.AnalysisStatus,
 			&i.AnalysisCreatedAt,
 			&i.AnalysisUpdatedAt,
+			&i.CommitID,
+			&i.CommitType,
+			&i.CommitScope,
+			&i.CommitMessage,
+			&i.CommitIsEditedByUser,
+			&i.CommitStatus,
+			&i.CommitCreatedAt,
+			&i.CommitUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

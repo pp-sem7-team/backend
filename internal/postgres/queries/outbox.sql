@@ -43,6 +43,13 @@ WHERE id = sqlc.arg(id)
   AND failed_at IS NULL;
 
 -- name: DeleteExpiredOutboxMessages :execrows
-DELETE FROM outbox
-WHERE published_at < sqlc.arg(cutoff)::timestamptz
-   OR failed_at < sqlc.arg(cutoff)::timestamptz;
+DELETE FROM outbox o
+WHERE (o.published_at < sqlc.arg(cutoff)::timestamptz
+    OR o.failed_at < sqlc.arg(cutoff)::timestamptz)
+  AND NOT EXISTS (
+      SELECT 1
+      FROM commits c
+      WHERE o.message_type = 'commit.request'
+        AND c.message_id = o.id
+        AND c.status = 'pending'
+  );

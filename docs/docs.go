@@ -58,6 +58,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -94,6 +100,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -150,6 +162,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -198,6 +216,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -384,6 +408,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -438,7 +468,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/changes.ChangeListResponse"
+                            "$ref": "#/definitions/change.ChangeListResponse"
                         }
                     },
                     "400": {
@@ -498,7 +528,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/changes.CreateChangeRequest"
+                            "$ref": "#/definitions/change.CreateChangeRequest"
                         }
                     }
                 ],
@@ -506,7 +536,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/changes.ChangeResponse"
+                            "$ref": "#/definitions/change.ChangeResponse"
                         }
                     },
                     "400": {
@@ -576,7 +606,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/changes.ChangeResponse"
+                            "$ref": "#/definitions/change.ChangeResponse"
                         }
                     },
                     "400": {
@@ -593,6 +623,148 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/changes/{change_id}/commit": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "commits"
+                ],
+                "summary": "Regenerate a commit message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Change ID",
+                        "name": "change_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/commit.CommitResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "commits"
+                ],
+                "summary": "Edit a commit message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Change ID",
+                        "name": "change_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Commit message",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/commit.EditCommitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/commit.CommitResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -734,6 +906,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -853,6 +1031,12 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
@@ -1039,6 +1223,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1198,6 +1388,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1342,7 +1538,7 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.AnalysisResultResponse": {
+        "change.AnalysisResultResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1356,7 +1552,7 @@ const docTemplate = `{
                 "status": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/changes.AnalysisStatus"
+                            "$ref": "#/definitions/generation.Status"
                         }
                     ],
                     "example": "pending"
@@ -1370,26 +1566,13 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.AnalysisStatus": {
-            "type": "string",
-            "enum": [
-                "pending",
-                "done",
-                "failed"
-            ],
-            "x-enum-varnames": [
-                "AnalysisStatusPending",
-                "AnalysisStatusDone",
-                "AnalysisStatusFailed"
-            ]
-        },
-        "changes.ChangeListResponse": {
+        "change.ChangeListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/changes.ChangeResponse"
+                        "$ref": "#/definitions/change.ChangeResponse"
                     }
                 },
                 "limit": {
@@ -1403,23 +1586,18 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.ChangeResponse": {
+        "change.ChangeResponse": {
             "type": "object",
             "properties": {
                 "analysis": {
-                    "$ref": "#/definitions/changes.AnalysisResultResponse"
+                    "$ref": "#/definitions/change.AnalysisResultResponse"
                 },
                 "branch_id": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440001"
                 },
                 "commit": {
-                    "description": "Commit is nil until the commit flow is implemented.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/changes.CommitResponse"
-                        }
-                    ]
+                    "$ref": "#/definitions/commit.CommitResponse"
                 },
                 "created_at": {
                     "type": "string",
@@ -1435,7 +1613,19 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.CommitResponse": {
+        "change.CreateChangeRequest": {
+            "type": "object",
+            "required": [
+                "raw_diff"
+            ],
+            "properties": {
+                "raw_diff": {
+                    "type": "string",
+                    "example": "diff --git a/main.go b/main.go"
+                }
+            }
+        },
+        "commit.CommitResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1461,13 +1651,17 @@ const docTemplate = `{
                 "status": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/changes.AnalysisStatus"
+                            "$ref": "#/definitions/generation.Status"
                         }
                     ],
                     "example": "pending"
                 },
                 "type": {
-                    "type": "string",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/commit.CommitType"
+                        }
+                    ],
                     "example": "feat"
                 },
                 "updated_at": {
@@ -1476,17 +1670,67 @@ const docTemplate = `{
                 }
             }
         },
-        "changes.CreateChangeRequest": {
+        "commit.CommitType": {
+            "type": "string",
+            "enum": [
+                "feat",
+                "fix",
+                "refactor",
+                "perf",
+                "docs",
+                "test",
+                "style",
+                "chore"
+            ],
+            "x-enum-varnames": [
+                "CommitTypeFeat",
+                "CommitTypeFix",
+                "CommitTypeRefactor",
+                "CommitTypePerf",
+                "CommitTypeDocs",
+                "CommitTypeTest",
+                "CommitTypeStyle",
+                "CommitTypeChore"
+            ]
+        },
+        "commit.EditCommitRequest": {
             "type": "object",
             "required": [
-                "raw_diff"
+                "message",
+                "type"
             ],
             "properties": {
-                "raw_diff": {
+                "message": {
                     "type": "string",
-                    "example": "diff --git a/main.go b/main.go"
+                    "example": "fix api response"
+                },
+                "scope": {
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "api"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/commit.CommitType"
+                        }
+                    ],
+                    "example": "fix"
                 }
             }
+        },
+        "generation.Status": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "done",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "Pending",
+                "Done",
+                "Failed"
+            ]
         },
         "httpx.Error": {
             "type": "object",

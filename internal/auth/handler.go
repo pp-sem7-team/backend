@@ -26,17 +26,12 @@ func NewHandler(service *Service) *Handler {
 // @Success 201 {object} TokenPair
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 409 {object} httpx.ErrorResponse
+// @Failure 413 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req CredentialsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.WriteError(
-			c,
-			http.StatusBadRequest,
-			httpx.ErrorCodeInvalidRequest,
-			"Invalid request body",
-		)
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -78,17 +73,12 @@ func (h *Handler) Register(c *gin.Context) {
 // @Success 200 {object} TokenPair
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
+// @Failure 413 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req CredentialsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.WriteError(
-			c,
-			http.StatusBadRequest,
-			httpx.ErrorCodeInvalidRequest,
-			"Invalid request body",
-		)
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -130,17 +120,12 @@ func (h *Handler) Login(c *gin.Context) {
 // @Success 200 {object} TokenPair
 // @Failure 400 {object} httpx.ErrorResponse
 // @Failure 401 {object} httpx.ErrorResponse
+// @Failure 413 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /auth/refresh [post]
 func (h *Handler) Refresh(c *gin.Context) {
 	var req RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.WriteError(
-			c,
-			http.StatusBadRequest,
-			httpx.ErrorCodeInvalidRequest,
-			"Invalid request body",
-		)
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 
@@ -179,17 +164,12 @@ func (h *Handler) Refresh(c *gin.Context) {
 // @Param request body RefreshTokenRequest true "Refresh token"
 // @Success 204
 // @Failure 400 {object} httpx.ErrorResponse
+// @Failure 413 {object} httpx.ErrorResponse
 // @Failure 500 {object} httpx.ErrorResponse
 // @Router /auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	var req RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.WriteError(
-			c,
-			http.StatusBadRequest,
-			httpx.ErrorCodeInvalidRequest,
-			"Invalid request body",
-		)
+	if !httpx.BindJSON(c, &req) {
 		return
 	}
 

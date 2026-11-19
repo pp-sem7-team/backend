@@ -12,9 +12,10 @@ const (
 	analysisRequestsQueue    = "generation.analysis.requests"
 	commitRequestsQueue      = "generation.commit.requests"
 	pullRequestRequestsQueue = "generation.pull_request.requests"
-	analysisResultsQueue     = "generation.analysis.results"
-	commitResultsQueue       = "generation.commit.results"
-	pullRequestResultsQueue  = "generation.pull_request.results"
+
+	AnalysisResultsQueue    = "generation.analysis.results"
+	CommitResultsQueue      = "generation.commit.results"
+	PullRequestResultsQueue = "generation.pull_request.results"
 )
 
 type topologyItem struct {
@@ -22,8 +23,6 @@ type topologyItem struct {
 	exchange   string
 	routingKey string
 }
-
-const AnalysisResultsQueue = analysisResultsQueue
 
 func (c *Client) declareTopology() error {
 	exchanges := []string{
@@ -50,9 +49,9 @@ func (c *Client) declareTopology() error {
 		{analysisRequestsQueue, commandsExchange, "analysis.request"},
 		{commitRequestsQueue, commandsExchange, "commit.request"},
 		{pullRequestRequestsQueue, commandsExchange, "pull_request.request"},
-		{analysisResultsQueue, resultsExchange, "analysis.result"},
-		{commitResultsQueue, resultsExchange, "commit.result"},
-		{pullRequestResultsQueue, resultsExchange, "pull_request.result"},
+		{AnalysisResultsQueue, resultsExchange, "analysis.result"},
+		{CommitResultsQueue, resultsExchange, "commit.result"},
+		{PullRequestResultsQueue, resultsExchange, "pull_request.result"},
 	}
 
 	for _, q := range queues {

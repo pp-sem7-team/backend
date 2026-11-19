@@ -1,4 +1,4 @@
-package changes
+package change
 
 import (
 	"errors"
@@ -53,7 +53,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	var req CreateChangeRequest
-	if !httpx.BindJSON(c, &req, maxCreateChangeBodyBytes) {
+	if !httpx.BindJSONWithLimit(c, &req, maxCreateChangeBodyBytes) {
 		return
 	}
 

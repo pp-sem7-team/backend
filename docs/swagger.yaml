@@ -87,7 +87,7 @@ definitions:
         - $ref: '#/definitions/branch.BranchStatus'
         example: closed
     type: object
-  changes.AnalysisResultResponse:
+  change.AnalysisResultResponse:
     properties:
       created_at:
         example: "2026-01-01T12:00:00Z"
@@ -97,7 +97,7 @@ definitions:
         type: string
       status:
         allOf:
-        - $ref: '#/definitions/changes.AnalysisStatus'
+        - $ref: '#/definitions/generation.Status'
         example: pending
       structured_changes:
         type: object
@@ -105,21 +105,11 @@ definitions:
         example: "2026-01-01T12:00:00Z"
         type: string
     type: object
-  changes.AnalysisStatus:
-    enum:
-    - pending
-    - done
-    - failed
-    type: string
-    x-enum-varnames:
-    - AnalysisStatusPending
-    - AnalysisStatusDone
-    - AnalysisStatusFailed
-  changes.ChangeListResponse:
+  change.ChangeListResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/changes.ChangeResponse'
+          $ref: '#/definitions/change.ChangeResponse'
         type: array
       limit:
         type: integer
@@ -128,17 +118,15 @@ definitions:
       total:
         type: integer
     type: object
-  changes.ChangeResponse:
+  change.ChangeResponse:
     properties:
       analysis:
-        $ref: '#/definitions/changes.AnalysisResultResponse'
+        $ref: '#/definitions/change.AnalysisResultResponse'
       branch_id:
         example: 550e8400-e29b-41d4-a716-446655440001
         type: string
       commit:
-        allOf:
-        - $ref: '#/definitions/changes.CommitResponse'
-        description: Commit is nil until the commit flow is implemented.
+        $ref: '#/definitions/commit.CommitResponse'
       created_at:
         example: "2026-01-01T12:00:00Z"
         type: string
@@ -149,7 +137,15 @@ definitions:
         example: 1
         type: integer
     type: object
-  changes.CommitResponse:
+  change.CreateChangeRequest:
+    properties:
+      raw_diff:
+        example: diff --git a/main.go b/main.go
+        type: string
+    required:
+    - raw_diff
+    type: object
+  commit.CommitResponse:
     properties:
       created_at:
         example: "2026-01-01T12:00:00Z"
@@ -168,23 +164,63 @@ definitions:
         type: string
       status:
         allOf:
-        - $ref: '#/definitions/changes.AnalysisStatus'
+        - $ref: '#/definitions/generation.Status'
         example: pending
       type:
+        allOf:
+        - $ref: '#/definitions/commit.CommitType'
         example: feat
-        type: string
       updated_at:
         example: "2026-01-01T12:00:00Z"
         type: string
     type: object
-  changes.CreateChangeRequest:
+  commit.CommitType:
+    enum:
+    - feat
+    - fix
+    - refactor
+    - perf
+    - docs
+    - test
+    - style
+    - chore
+    type: string
+    x-enum-varnames:
+    - CommitTypeFeat
+    - CommitTypeFix
+    - CommitTypeRefactor
+    - CommitTypePerf
+    - CommitTypeDocs
+    - CommitTypeTest
+    - CommitTypeStyle
+    - CommitTypeChore
+  commit.EditCommitRequest:
     properties:
-      raw_diff:
-        example: diff --git a/main.go b/main.go
+      message:
+        example: fix api response
         type: string
+      scope:
+        example: api
+        type: string
+        x-nullable: true
+      type:
+        allOf:
+        - $ref: '#/definitions/commit.CommitType'
+        example: fix
     required:
-    - raw_diff
+    - message
+    - type
     type: object
+  generation.Status:
+    enum:
+    - pending
+    - done
+    - failed
+    type: string
+    x-enum-varnames:
+    - Pending
+    - Done
+    - Failed
   httpx.Error:
     properties:
       code:
@@ -319,6 +355,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -343,6 +383,10 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
@@ -379,6 +423,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -411,6 +459,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
           description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
@@ -528,6 +580,10 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -565,7 +621,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/changes.ChangeListResponse'
+            $ref: '#/definitions/change.ChangeListResponse'
         "400":
           description: Bad Request
           schema:
@@ -603,14 +659,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/changes.CreateChangeRequest'
+          $ref: '#/definitions/change.CreateChangeRequest'
       produces:
       - application/json
       responses:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/changes.ChangeResponse'
+            $ref: '#/definitions/change.ChangeResponse'
         "400":
           description: Bad Request
           schema:
@@ -655,7 +711,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/changes.ChangeResponse'
+            $ref: '#/definitions/change.ChangeResponse'
         "400":
           description: Bad Request
           schema:
@@ -677,6 +733,97 @@ paths:
       summary: Get change
       tags:
       - changes
+  /changes/{change_id}/commit:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Change ID
+        in: path
+        name: change_id
+        required: true
+        type: string
+      - description: Commit message
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/commit.EditCommitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/commit.CommitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Edit a commit message
+      tags:
+      - commits
+    post:
+      parameters:
+      - description: Change ID
+        in: path
+        name: change_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/commit.CommitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Regenerate a commit message
+      tags:
+      - commits
   /health:
     get:
       description: Checks that the server is running.
@@ -753,6 +900,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
@@ -833,6 +984,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
           description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":
@@ -952,6 +1107,10 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -1055,6 +1214,10 @@ paths:
             $ref: '#/definitions/httpx.ErrorResponse'
         "409":
           description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
           schema:
             $ref: '#/definitions/httpx.ErrorResponse'
         "500":

@@ -176,7 +176,7 @@ type Change struct {
 type Commit struct {
 	ID             uuid.UUID        `json:"id"`
 	ChangeID       uuid.UUID        `json:"change_id"`
-	Type           NullCommitType   `json:"type"`
+	Type           *CommitType      `json:"type"`
 	Scope          *string          `json:"scope"`
 	Message        *string          `json:"message"`
 	IsEditedByUser bool             `json:"is_edited_by_user"`
