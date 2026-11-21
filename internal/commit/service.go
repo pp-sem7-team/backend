@@ -51,7 +51,7 @@ func (s *Service) RegenerateCommit(ctx context.Context, userID, changeID uuid.UU
 	}()
 
 	queries := s.querier.WithTx(tx)
-	row, err := queries.LockCommitByChange(ctx, db.LockCommitByChangeParams{
+	row, err := queries.LockCommit(ctx, db.LockCommitParams{
 		ChangeID: changeID,
 		UserID:   userID,
 	})
@@ -132,7 +132,7 @@ func (s *Service) EditCommit(
 	}()
 
 	queries := s.querier.WithTx(tx)
-	row, err := queries.LockCommitByChange(ctx, db.LockCommitByChangeParams{
+	row, err := queries.LockCommit(ctx, db.LockCommitParams{
 		ChangeID: changeID,
 		UserID:   userID,
 	})

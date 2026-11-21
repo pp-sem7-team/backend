@@ -13,6 +13,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/pp-sem7-team/backend/internal/auth"
+	"github.com/pp-sem7-team/backend/internal/branch"
 	"github.com/pp-sem7-team/backend/internal/broker"
 	"github.com/pp-sem7-team/backend/internal/change"
 	"github.com/pp-sem7-team/backend/internal/cleanup"
@@ -22,6 +23,9 @@ import (
 	"github.com/pp-sem7-team/backend/internal/outbox"
 	"github.com/pp-sem7-team/backend/internal/postgres"
 	"github.com/pp-sem7-team/backend/internal/postgres/db"
+	"github.com/pp-sem7-team/backend/internal/pullrequest"
+	"github.com/pp-sem7-team/backend/internal/user"
+	"github.com/pp-sem7-team/backend/internal/workspace"
 )
 
 const analysisResultPrefetch = 10
@@ -62,9 +66,15 @@ func Run() error {
 
 	var workers sync.WaitGroup
 
+	authService := auth.NewService(querier, tokenManager, log.With("module", "auth"))
+	userService := user.NewService(querier, log.With("module", "user"))
+	workspaceService := workspace.NewService(querier, log.With("module", "workspace"))
+	branchService := branch.NewService(querier, log.With("module", "branch"))
 	changeService := change.NewService(database, querier, log.With("module", "change"))
-	analysisConsumer := change.NewAnalysisResultConsumer(changeService, log.With("module", "analysis"))
 	commitService := commit.NewService(database, querier, log.With("module", "commit"))
+	pullRequestService := pullrequest.NewService(database, querier, log.With("module", "pullrequest"))
+
+	analysisConsumer := change.NewAnalysisResultConsumer(changeService, log.With("module", "analysis"))
 	commitConsumer := commit.NewCommitResultConsumer(commitService, log.With("module", "commit"))
 	outboxWorker := outbox.NewWorker(
 		querier,
@@ -122,7 +132,18 @@ func Run() error {
 		cleanup.RefreshTokens(appCtx, querier, log)
 	}()
 
-	router := NewRouter(database, querier, tokenManager, changeService, commitService, log)
+	router := NewRouter(
+		database,
+		tokenManager,
+		authService,
+		userService,
+		workspaceService,
+		branchService,
+		changeService,
+		commitService,
+		pullRequestService,
+		log,
+	)
 
 	server := &http.Server{
 		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,

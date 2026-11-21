@@ -17,17 +17,21 @@ import (
 	"github.com/pp-sem7-team/backend/internal/health"
 	"github.com/pp-sem7-team/backend/internal/middleware"
 	"github.com/pp-sem7-team/backend/internal/postgres"
-	"github.com/pp-sem7-team/backend/internal/postgres/db"
+	"github.com/pp-sem7-team/backend/internal/pullrequest"
 	"github.com/pp-sem7-team/backend/internal/user"
 	"github.com/pp-sem7-team/backend/internal/workspace"
 )
 
 func NewRouter(
 	database *postgres.DB,
-	querier *db.Queries,
 	tokenManager *auth.JWTTokenManager,
+	authService *auth.Service,
+	userService *user.Service,
+	workspaceService *workspace.Service,
+	branchService *branch.Service,
 	changeService *change.Service,
 	commitService *commit.Service,
+	pullRequestService *pullrequest.Service,
 	log *slog.Logger,
 ) http.Handler {
 	router := gin.New()
@@ -36,20 +40,13 @@ func NewRouter(
 
 	healthHandler := health.NewHealthHandler(database)
 
-	authService := auth.NewService(querier, tokenManager, log.With("module", "auth"))
 	authHandler := auth.NewHandler(authService)
-
-	userService := user.NewService(querier, log.With("module", "user"))
 	userHandler := user.NewHandler(userService)
-
-	workspaceService := workspace.NewService(querier, log.With("module", "workspace"))
 	workspaceHandler := workspace.NewHandler(workspaceService)
-
-	branchService := branch.NewService(querier, log.With("module", "branch"))
 	branchHandler := branch.NewHandler(branchService)
-
 	changeHandler := change.NewHandler(changeService)
 	commitHandler := commit.NewHandler(commitService)
+	pullRequestHandler := pullrequest.NewHandler(pullRequestService)
 
 	router.GET("/health", healthHandler.Health)
 	router.GET("/health/db", healthHandler.HealthDB)
@@ -92,6 +89,9 @@ func NewRouter(
 		branches.GET("/changes/:change_id", changeHandler.Get)
 		branches.POST("/changes/:change_id/commit", commitHandler.RegenerateCommit)
 		branches.PATCH("/changes/:change_id/commit", commitHandler.EditCommit)
+		branches.POST("/branches/:branch_id/pull-request", pullRequestHandler.Generate)
+		branches.GET("/branches/:branch_id/pull-request", pullRequestHandler.Get)
+		branches.PATCH("/branches/:branch_id/pull-request", pullRequestHandler.Edit)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

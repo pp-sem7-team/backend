@@ -72,6 +72,17 @@ WHERE w.id = sqlc.arg(workspace_id)
       OR b.status = sqlc.narg(status)::branch_status
   );
 
+-- name: LockBranch :one
+SELECT
+    b.id,
+    b.name,
+    b.status
+FROM branches b
+JOIN workspaces w ON w.id = b.workspace_id
+WHERE b.id = sqlc.arg(branch_id)
+  AND w.user_id = sqlc.arg(user_id)
+FOR UPDATE OF b;
+
 -- name: UpdateBranch :one
 UPDATE branches b
 SET

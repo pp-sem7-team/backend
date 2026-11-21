@@ -21,7 +21,7 @@ FROM commits
 WHERE change_id = sqlc.arg(change_id)
   AND status = 'pending';
 
--- name: LockCommitByChange :one
+-- name: LockCommit :one
 SELECT
     cm.id,
     cm.status,

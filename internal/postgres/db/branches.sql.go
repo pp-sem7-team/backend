@@ -222,6 +222,36 @@ func (q *Queries) ListBranches(ctx context.Context, arg ListBranchesParams) ([]B
 	return items, nil
 }
 
+const lockBranch = `-- name: LockBranch :one
+SELECT
+    b.id,
+    b.name,
+    b.status
+FROM branches b
+JOIN workspaces w ON w.id = b.workspace_id
+WHERE b.id = $1
+  AND w.user_id = $2
+FOR UPDATE OF b
+`
+
+type LockBranchParams struct {
+	BranchID uuid.UUID `json:"branch_id"`
+	UserID   uuid.UUID `json:"user_id"`
+}
+
+type LockBranchRow struct {
+	ID     uuid.UUID    `json:"id"`
+	Name   string       `json:"name"`
+	Status BranchStatus `json:"status"`
+}
+
+func (q *Queries) LockBranch(ctx context.Context, arg LockBranchParams) (LockBranchRow, error) {
+	row := q.db.QueryRow(ctx, lockBranch, arg.BranchID, arg.UserID)
+	var i LockBranchRow
+	err := row.Scan(&i.ID, &i.Name, &i.Status)
+	return i, err
+}
+
 const updateBranch = `-- name: UpdateBranch :one
 UPDATE branches b
 SET
