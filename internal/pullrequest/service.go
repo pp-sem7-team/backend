@@ -258,6 +258,30 @@ func (s *Service) Edit(ctx context.Context, userID, branchID uuid.UUID, title, d
 	return toPullRequest(db.GetPullRequestRow(result)), nil
 }
 
+func (s *Service) ApplyPullRequestResult(
+	ctx context.Context,
+	pullRequestID, messageID uuid.UUID,
+	status generation.Status,
+	title, description *string,
+) (bool, error) {
+	count, err := s.querier.ApplyPullRequestResult(ctx, db.ApplyPullRequestResultParams{
+		PullRequestID: pullRequestID,
+		MessageID:     messageID,
+		Status:        db.GenerationStatus(status),
+		Title:         title,
+		Description:   description,
+	})
+	if err != nil {
+		s.log.Error("failed to apply pull request result",
+			"error", err,
+			"pull_request_id", pullRequestID,
+			"message_id", messageID,
+		)
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func toPullRequest(row db.GetPullRequestRow) PullRequest {
 	return PullRequest{
 		ID:             row.ID,

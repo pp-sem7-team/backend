@@ -30,6 +30,7 @@ import (
 
 const analysisResultPrefetch = 10
 const commitResultPrefetch = 10
+const pullRequestResultPrefetch = 10
 
 func Run() error {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
@@ -76,6 +77,7 @@ func Run() error {
 
 	analysisConsumer := change.NewAnalysisResultConsumer(changeService, log.With("module", "analysis"))
 	commitConsumer := commit.NewCommitResultConsumer(commitService, log.With("module", "commit"))
+	pullRequestConsumer := pullrequest.NewPullRequestResultConsumer(pullRequestService, log.With("module", "pullrequest"))
 	outboxWorker := outbox.NewWorker(
 		querier,
 		brokerClient,
@@ -83,7 +85,7 @@ func Run() error {
 		log.With("module", "outbox"),
 	)
 
-	workers.Add(6)
+	workers.Add(8)
 
 	go func() {
 		defer workers.Done()
@@ -98,6 +100,11 @@ func Run() error {
 	go func() {
 		defer workers.Done()
 		commitService.RunTimeoutWorker(appCtx, cfg.Generation.Timeout)
+	}()
+
+	go func() {
+		defer workers.Done()
+		pullRequestService.RunTimeoutWorker(appCtx, cfg.Generation.Timeout)
 	}()
 
 	go func() {
@@ -124,6 +131,20 @@ func Run() error {
 		)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			log.Error("commit result consumer stopped", "error", err)
+		}
+	}()
+
+	go func() {
+		defer workers.Done()
+
+		err := brokerClient.Consume(
+			appCtx,
+			broker.PullRequestResultsQueue,
+			pullRequestResultPrefetch,
+			pullRequestConsumer.Handle,
+		)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			log.Error("pull request result consumer stopped", "error", err)
 		}
 	}()
 

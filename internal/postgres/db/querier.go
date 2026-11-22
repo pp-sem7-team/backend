@@ -14,6 +14,7 @@ import (
 type Querier interface {
 	ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (uuid.UUID, error)
 	ApplyCommitResult(ctx context.Context, arg ApplyCommitResultParams) (int64, error)
+	ApplyPullRequestResult(ctx context.Context, arg ApplyPullRequestResultParams) (int64, error)
 	BranchExists(ctx context.Context, arg BranchExistsParams) (bool, error)
 	CountBranches(ctx context.Context, arg CountBranchesParams) (int, error)
 	CountChangesByBranch(ctx context.Context, arg CountChangesByBranchParams) (int, error)
@@ -35,6 +36,7 @@ type Querier interface {
 	FailPendingCommitByChange(ctx context.Context, changeID uuid.UUID) error
 	FailStalePendingAnalyses(ctx context.Context, cutoff time.Time) (int, error)
 	FailStalePendingCommits(ctx context.Context, cutoff time.Time) (int64, error)
+	FailStalePendingPullRequests(ctx context.Context, cutoff time.Time) (int64, error)
 	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
 	GetChange(ctx context.Context, arg GetChangeParams) (GetChangeRow, error)
 	GetPendingCommitByChange(ctx context.Context, changeID uuid.UUID) (GetPendingCommitByChangeRow, error)

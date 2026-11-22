@@ -84,3 +84,20 @@ RETURNING
     status,
     created_at,
     updated_at;
+
+-- name: ApplyPullRequestResult :execrows
+UPDATE pull_requests
+SET status = sqlc.arg(status)::generation_status,
+    title = sqlc.narg(title)::text,
+    description = sqlc.narg(description)::text,
+    updated_at = now()
+WHERE id = sqlc.arg(pull_request_id)
+  AND status = 'pending'
+  AND message_id = sqlc.arg(message_id);
+
+-- name: FailStalePendingPullRequests :execrows
+UPDATE pull_requests
+SET status = 'failed',
+    updated_at = now()
+WHERE status = 'pending'
+  AND updated_at < sqlc.arg(cutoff)::timestamptz;

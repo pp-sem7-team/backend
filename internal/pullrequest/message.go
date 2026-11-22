@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/pp-sem7-team/backend/internal/commit"
+	"github.com/pp-sem7-team/backend/internal/generation"
 )
 
 type pullRequestRequestPayload struct {
@@ -24,4 +25,12 @@ type commitContext struct {
 	Type    commit.CommitType `json:"type"`
 	Scope   *string           `json:"scope"`
 	Message string            `json:"message"`
+}
+
+type pullRequestResultMessage struct {
+	PullRequestID uuid.UUID         `json:"pull_request_id"`
+	Status        generation.Status `json:"status"`
+	Title         *string           `json:"title"`
+	Description   *string           `json:"description"`
+	Error         *generation.Error `json:"error"`
 }

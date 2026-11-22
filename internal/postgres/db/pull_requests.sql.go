@@ -12,6 +12,39 @@ import (
 	"github.com/google/uuid"
 )
 
+const applyPullRequestResult = `-- name: ApplyPullRequestResult :execrows
+UPDATE pull_requests
+SET status = $1::generation_status,
+    title = $2::text,
+    description = $3::text,
+    updated_at = now()
+WHERE id = $4
+  AND status = 'pending'
+  AND message_id = $5
+`
+
+type ApplyPullRequestResultParams struct {
+	Status        GenerationStatus `json:"status"`
+	Title         *string          `json:"title"`
+	Description   *string          `json:"description"`
+	PullRequestID uuid.UUID        `json:"pull_request_id"`
+	MessageID     uuid.UUID        `json:"message_id"`
+}
+
+func (q *Queries) ApplyPullRequestResult(ctx context.Context, arg ApplyPullRequestResultParams) (int64, error) {
+	result, err := q.db.Exec(ctx, applyPullRequestResult,
+		arg.Status,
+		arg.Title,
+		arg.Description,
+		arg.PullRequestID,
+		arg.MessageID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const editPullRequest = `-- name: EditPullRequest :one
 UPDATE pull_requests
 SET title = $1::text,
@@ -62,6 +95,22 @@ func (q *Queries) EditPullRequest(ctx context.Context, arg EditPullRequestParams
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const failStalePendingPullRequests = `-- name: FailStalePendingPullRequests :execrows
+UPDATE pull_requests
+SET status = 'failed',
+    updated_at = now()
+WHERE status = 'pending'
+  AND updated_at < $1::timestamptz
+`
+
+func (q *Queries) FailStalePendingPullRequests(ctx context.Context, cutoff time.Time) (int64, error) {
+	result, err := q.db.Exec(ctx, failStalePendingPullRequests, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getPullRequest = `-- name: GetPullRequest :one
