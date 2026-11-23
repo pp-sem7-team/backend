@@ -26,13 +26,15 @@ import (
 )
 
 const (
-	analysisRequestsQueue = "generation.analysis.requests"
-	commitRequestsQueue   = "generation.commit.requests"
-	resultsExchange       = "generation.results"
-	analysisResultKey     = "analysis.result"
-	commitResultKey       = "commit.result"
-	prefetch              = 1
-	retryDelay            = 2 * time.Second
+	analysisRequestsQueue    = "generation.analysis.requests"
+	commitRequestsQueue      = "generation.commit.requests"
+	pullRequestRequestsQueue = "generation.pull_request.requests"
+	resultsExchange          = "generation.results"
+	analysisResultKey        = "analysis.result"
+	commitResultKey          = "commit.result"
+	pullRequestResultKey     = "pull_request.result"
+	prefetch                 = 1
+	retryDelay               = 2 * time.Second
 )
 
 var errPermanent = errors.New("permanent message error")
@@ -61,6 +63,20 @@ type commitResult struct {
 	Scope    json.RawMessage   `json:"scope,omitempty"`
 	Message  string            `json:"message,omitempty"`
 	Error    *generation.Error `json:"error,omitempty"`
+}
+
+type pullRequestRequest struct {
+	PullRequestID uuid.UUID         `json:"pull_request_id"`
+	BranchName    string            `json:"branch_name"`
+	Changes       []json.RawMessage `json:"changes"`
+}
+
+type pullRequestResult struct {
+	PullRequestID uuid.UUID         `json:"pull_request_id"`
+	Status        string            `json:"status"`
+	Title         string            `json:"title,omitempty"`
+	Description   string            `json:"description,omitempty"`
+	Error         *generation.Error `json:"error,omitempty"`
 }
 
 type structuredChanges struct {
@@ -215,10 +231,16 @@ func (s *stub) run(ctx context.Context, cfg rabbitMQConfig) error {
 		return fmt.Errorf("consume %s: %w", commitRequestsQueue, err)
 	}
 
+	pullRequestDeliveries, err := consumeCh.Consume(pullRequestRequestsQueue, "", false, false, false, false, nil)
+	if err != nil {
+		return fmt.Errorf("consume %s: %w", pullRequestRequestsQueue, err)
+	}
+
 	returns := publishCh.NotifyReturn(make(chan amqp.Return, 1))
 	s.log.Info("ai stub connected",
 		"analysis_queue", analysisRequestsQueue,
 		"commit_queue", commitRequestsQueue,
+		"pull_request_queue", pullRequestRequestsQueue,
 	)
 
 	for {
@@ -235,6 +257,11 @@ func (s *stub) run(ctx context.Context, cfg rabbitMQConfig) error {
 				return errors.New("commit deliveries channel closed")
 			}
 			s.handleDelivery(ctx, publishCh, returns, delivery, commitResultKey)
+		case delivery, ok := <-pullRequestDeliveries:
+			if !ok {
+				return errors.New("pull request deliveries channel closed")
+			}
+			s.handleDelivery(ctx, publishCh, returns, delivery, pullRequestResultKey)
 		}
 	}
 }
@@ -281,6 +308,8 @@ func (s *stub) process(ctx context.Context, ch *amqp.Channel, returns <-chan amq
 		body, err = makeAnalysisResult(delivery.Body, status)
 	case commitResultKey:
 		body, err = makeCommitResult(delivery.Body, status)
+	case pullRequestResultKey:
+		body, err = makePullRequestResult(delivery.Body, status)
 	}
 	if err != nil {
 		return err
@@ -396,6 +425,33 @@ func makeCommitResult(body []byte, status string) ([]byte, error) {
 		result.Error = &generation.Error{
 			Code:    "internal_error",
 			Message: "simulated commit generation failure",
+		}
+	}
+	return json.Marshal(result)
+}
+
+func makePullRequestResult(body []byte, status string) ([]byte, error) {
+	var request pullRequestRequest
+	if err := json.Unmarshal(body, &request); err != nil {
+		return nil, fmt.Errorf("%w: invalid payload: %v", errPermanent, err)
+	}
+	if request.PullRequestID == uuid.Nil ||
+		strings.TrimSpace(request.BranchName) == "" ||
+		len(request.Changes) == 0 {
+		return nil, fmt.Errorf("%w: pull_request_id, branch_name and changes are required", errPermanent)
+	}
+
+	result := pullRequestResult{
+		PullRequestID: request.PullRequestID,
+		Status:        status,
+	}
+	if status == "done" {
+		result.Title = "Update project files"
+		result.Description = "Подготовлено описание изменений ветки."
+	} else {
+		result.Error = &generation.Error{
+			Code:    "internal_error",
+			Message: "simulated pull request generation failure",
 		}
 	}
 	return json.Marshal(result)
