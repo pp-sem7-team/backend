@@ -1,14 +1,3 @@
--- name: LockBranchForChange :one
-SELECT
-    b.id,
-    b.status
-FROM branches b
-JOIN workspaces w ON w.id = b.workspace_id
-WHERE b.id = sqlc.arg(branch_id)
-  AND w.user_id = sqlc.arg(user_id)
-FOR UPDATE OF b;
-
-
 -- name: CreateChange :one
 INSERT INTO changes (
     id,

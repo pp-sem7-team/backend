@@ -142,7 +142,7 @@ func (q *Queries) GetPendingCommitByChange(ctx context.Context, changeID uuid.UU
 	return i, err
 }
 
-const lockCommitByChange = `-- name: LockCommitByChange :one
+const lockCommit = `-- name: LockCommit :one
 SELECT
     cm.id,
     cm.status,
@@ -158,21 +158,21 @@ WHERE cm.change_id = $1
 FOR UPDATE OF cm
 `
 
-type LockCommitByChangeParams struct {
+type LockCommitParams struct {
 	ChangeID uuid.UUID `json:"change_id"`
 	UserID   uuid.UUID `json:"user_id"`
 }
 
-type LockCommitByChangeRow struct {
+type LockCommitRow struct {
 	ID                uuid.UUID        `json:"id"`
 	Status            GenerationStatus `json:"status"`
 	AnalysisStatus    GenerationStatus `json:"analysis_status"`
 	StructuredChanges []byte           `json:"structured_changes"`
 }
 
-func (q *Queries) LockCommitByChange(ctx context.Context, arg LockCommitByChangeParams) (LockCommitByChangeRow, error) {
-	row := q.db.QueryRow(ctx, lockCommitByChange, arg.ChangeID, arg.UserID)
-	var i LockCommitByChangeRow
+func (q *Queries) LockCommit(ctx context.Context, arg LockCommitParams) (LockCommitRow, error) {
+	row := q.db.QueryRow(ctx, lockCommit, arg.ChangeID, arg.UserID)
+	var i LockCommitRow
 	err := row.Scan(
 		&i.ID,
 		&i.Status,

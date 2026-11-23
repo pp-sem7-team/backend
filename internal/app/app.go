@@ -13,6 +13,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/pp-sem7-team/backend/internal/auth"
+	"github.com/pp-sem7-team/backend/internal/branch"
 	"github.com/pp-sem7-team/backend/internal/broker"
 	"github.com/pp-sem7-team/backend/internal/change"
 	"github.com/pp-sem7-team/backend/internal/cleanup"
@@ -22,10 +23,14 @@ import (
 	"github.com/pp-sem7-team/backend/internal/outbox"
 	"github.com/pp-sem7-team/backend/internal/postgres"
 	"github.com/pp-sem7-team/backend/internal/postgres/db"
+	"github.com/pp-sem7-team/backend/internal/pullrequest"
+	"github.com/pp-sem7-team/backend/internal/user"
+	"github.com/pp-sem7-team/backend/internal/workspace"
 )
 
 const analysisResultPrefetch = 10
 const commitResultPrefetch = 10
+const pullRequestResultPrefetch = 10
 
 func Run() error {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
@@ -62,10 +67,17 @@ func Run() error {
 
 	var workers sync.WaitGroup
 
+	authService := auth.NewService(querier, tokenManager, log.With("module", "auth"))
+	userService := user.NewService(querier, log.With("module", "user"))
+	workspaceService := workspace.NewService(querier, log.With("module", "workspace"))
+	branchService := branch.NewService(querier, log.With("module", "branch"))
 	changeService := change.NewService(database, querier, log.With("module", "change"))
-	analysisConsumer := change.NewAnalysisResultConsumer(changeService, log.With("module", "analysis"))
 	commitService := commit.NewService(database, querier, log.With("module", "commit"))
+	pullRequestService := pullrequest.NewService(database, querier, log.With("module", "pullrequest"))
+
+	analysisConsumer := change.NewAnalysisResultConsumer(changeService, log.With("module", "analysis"))
 	commitConsumer := commit.NewCommitResultConsumer(commitService, log.With("module", "commit"))
+	pullRequestConsumer := pullrequest.NewPullRequestResultConsumer(pullRequestService, log.With("module", "pullrequest"))
 	outboxWorker := outbox.NewWorker(
 		querier,
 		brokerClient,
@@ -73,7 +85,7 @@ func Run() error {
 		log.With("module", "outbox"),
 	)
 
-	workers.Add(6)
+	workers.Add(8)
 
 	go func() {
 		defer workers.Done()
@@ -88,6 +100,11 @@ func Run() error {
 	go func() {
 		defer workers.Done()
 		commitService.RunTimeoutWorker(appCtx, cfg.Generation.Timeout)
+	}()
+
+	go func() {
+		defer workers.Done()
+		pullRequestService.RunTimeoutWorker(appCtx, cfg.Generation.Timeout)
 	}()
 
 	go func() {
@@ -119,10 +136,35 @@ func Run() error {
 
 	go func() {
 		defer workers.Done()
+
+		err := brokerClient.Consume(
+			appCtx,
+			broker.PullRequestResultsQueue,
+			pullRequestResultPrefetch,
+			pullRequestConsumer.Handle,
+		)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			log.Error("pull request result consumer stopped", "error", err)
+		}
+	}()
+
+	go func() {
+		defer workers.Done()
 		cleanup.RefreshTokens(appCtx, querier, log)
 	}()
 
-	router := NewRouter(database, querier, tokenManager, changeService, commitService, log)
+	router := NewRouter(
+		database,
+		tokenManager,
+		authService,
+		userService,
+		workspaceService,
+		branchService,
+		changeService,
+		commitService,
+		pullRequestService,
+		log,
+	)
 
 	server := &http.Server{
 		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,

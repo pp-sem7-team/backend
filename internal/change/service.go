@@ -35,7 +35,7 @@ type Querier interface {
 	FailStalePendingAnalyses(ctx context.Context, cutoff time.Time) (int, error)
 	GetChange(ctx context.Context, arg db.GetChangeParams) (db.GetChangeRow, error)
 	ListChangesByBranch(ctx context.Context, arg db.ListChangesByBranchParams) ([]db.ListChangesByBranchRow, error)
-	LockBranchForChange(ctx context.Context, arg db.LockBranchForChangeParams) (db.LockBranchForChangeRow, error)
+	LockBranch(ctx context.Context, arg db.LockBranchParams) (db.LockBranchRow, error)
 	WithTx(tx pgx.Tx) *db.Queries
 }
 
@@ -77,7 +77,7 @@ func (s *Service) Create(
 
 	querier := s.querier.WithTx(tx)
 
-	branch, err := querier.LockBranchForChange(ctx, db.LockBranchForChangeParams{
+	branch, err := querier.LockBranch(ctx, db.LockBranchParams{
 		BranchID: branchID,
 		UserID:   userID,
 	})

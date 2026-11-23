@@ -14,6 +14,7 @@ import (
 type Querier interface {
 	ApplyAnalysisResult(ctx context.Context, arg ApplyAnalysisResultParams) (uuid.UUID, error)
 	ApplyCommitResult(ctx context.Context, arg ApplyCommitResultParams) (int64, error)
+	ApplyPullRequestResult(ctx context.Context, arg ApplyPullRequestResultParams) (int64, error)
 	BranchExists(ctx context.Context, arg BranchExistsParams) (bool, error)
 	CountBranches(ctx context.Context, arg CountBranchesParams) (int, error)
 	CountChangesByBranch(ctx context.Context, arg CountChangesByBranchParams) (int, error)
@@ -31,12 +32,15 @@ type Querier interface {
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
 	DeleteRefreshTokenByHash(ctx context.Context, tokenHash string) error
 	DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) (int64, error)
+	EditPullRequest(ctx context.Context, arg EditPullRequestParams) (EditPullRequestRow, error)
 	FailPendingCommitByChange(ctx context.Context, changeID uuid.UUID) error
 	FailStalePendingAnalyses(ctx context.Context, cutoff time.Time) (int, error)
 	FailStalePendingCommits(ctx context.Context, cutoff time.Time) (int64, error)
+	FailStalePendingPullRequests(ctx context.Context, cutoff time.Time) (int64, error)
 	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
 	GetChange(ctx context.Context, arg GetChangeParams) (GetChangeRow, error)
 	GetPendingCommitByChange(ctx context.Context, changeID uuid.UUID) (GetPendingCommitByChangeRow, error)
+	GetPullRequest(ctx context.Context, arg GetPullRequestParams) (GetPullRequestRow, error)
 	GetUser(ctx context.Context, userID uuid.UUID) (GetUserRow, error)
 	GetUserCredentialsByEmail(ctx context.Context, email string) (GetUserCredentialsByEmailRow, error)
 	GetUserIDByRefreshTokenHash(ctx context.Context, tokenHash string) (uuid.UUID, error)
@@ -44,18 +48,21 @@ type Querier interface {
 	GetWorkspace(ctx context.Context, arg GetWorkspaceParams) (GetWorkspaceRow, error)
 	ListBranches(ctx context.Context, arg ListBranchesParams) ([]Branch, error)
 	ListChangesByBranch(ctx context.Context, arg ListChangesByBranchParams) ([]ListChangesByBranchRow, error)
+	ListPullRequestChanges(ctx context.Context, branchID uuid.UUID) ([]ListPullRequestChangesRow, error)
 	ListUnpublishedOutboxMessages(ctx context.Context, batchSize int) ([]ListUnpublishedOutboxMessagesRow, error)
 	ListWorkspaces(ctx context.Context, arg ListWorkspacesParams) ([]ListWorkspacesRow, error)
-	LockBranchForChange(ctx context.Context, arg LockBranchForChangeParams) (LockBranchForChangeRow, error)
-	LockCommitByChange(ctx context.Context, arg LockCommitByChangeParams) (LockCommitByChangeRow, error)
+	LockBranch(ctx context.Context, arg LockBranchParams) (LockBranchRow, error)
+	LockCommit(ctx context.Context, arg LockCommitParams) (LockCommitRow, error)
 	MarkOutboxMessageAttemptFailed(ctx context.Context, arg MarkOutboxMessageAttemptFailedParams) error
 	MarkOutboxMessagePublished(ctx context.Context, id uuid.UUID) error
+	PullRequestExists(ctx context.Context, branchID uuid.UUID) (bool, error)
 	ResetCommit(ctx context.Context, arg ResetCommitParams) (ResetCommitRow, error)
 	RotateRefreshToken(ctx context.Context, arg RotateRefreshTokenParams) (int64, error)
 	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)
 	UpdateCommitMessage(ctx context.Context, arg UpdateCommitMessageParams) (UpdateCommitMessageRow, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error)
 	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (UpdateWorkspaceRow, error)
+	UpsertPendingPullRequest(ctx context.Context, arg UpsertPendingPullRequestParams) (UpsertPendingPullRequestRow, error)
 	WorkspaceExists(ctx context.Context, arg WorkspaceExistsParams) (bool, error)
 }
 

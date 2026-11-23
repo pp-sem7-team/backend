@@ -260,31 +260,3 @@ func (q *Queries) ListChangesByBranch(ctx context.Context, arg ListChangesByBran
 	}
 	return items, nil
 }
-
-const lockBranchForChange = `-- name: LockBranchForChange :one
-SELECT
-    b.id,
-    b.status
-FROM branches b
-JOIN workspaces w ON w.id = b.workspace_id
-WHERE b.id = $1
-  AND w.user_id = $2
-FOR UPDATE OF b
-`
-
-type LockBranchForChangeParams struct {
-	BranchID uuid.UUID `json:"branch_id"`
-	UserID   uuid.UUID `json:"user_id"`
-}
-
-type LockBranchForChangeRow struct {
-	ID     uuid.UUID    `json:"id"`
-	Status BranchStatus `json:"status"`
-}
-
-func (q *Queries) LockBranchForChange(ctx context.Context, arg LockBranchForChangeParams) (LockBranchForChangeRow, error) {
-	row := q.db.QueryRow(ctx, lockBranchForChange, arg.BranchID, arg.UserID)
-	var i LockBranchForChangeRow
-	err := row.Scan(&i.ID, &i.Status)
-	return i, err
-}

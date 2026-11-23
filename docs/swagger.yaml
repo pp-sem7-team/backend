@@ -251,6 +251,46 @@ definitions:
       error:
         $ref: '#/definitions/httpx.Error'
     type: object
+  pullrequest.EditPullRequestRequest:
+    properties:
+      description:
+        type: string
+      title:
+        type: string
+    required:
+    - description
+    - title
+    type: object
+  pullrequest.PullRequestResponse:
+    properties:
+      branch_id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      created_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+      description:
+        example: Реализован модуль пользователей.
+        type: string
+        x-nullable: true
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440004
+        type: string
+      is_edited_by_user:
+        example: false
+        type: boolean
+      status:
+        allOf:
+        - $ref: '#/definitions/generation.Status'
+        example: pending
+      title:
+        example: Implement user service
+        type: string
+        x-nullable: true
+      updated_at:
+        example: "2026-01-01T12:00:00Z"
+        type: string
+    type: object
   user.UpdatePasswordRequest:
     properties:
       current_password:
@@ -696,6 +736,132 @@ paths:
       summary: Create change
       tags:
       - changes
+  /branches/{branch_id}/pull-request:
+    get:
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pullrequest.PullRequestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a branch pull request
+      tags:
+      - pull-requests
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      - description: Pull request title and description
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pullrequest.EditPullRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pullrequest.PullRequestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Edit a generated pull request
+      tags:
+      - pull-requests
+    post:
+      parameters:
+      - description: Branch ID
+        in: path
+        name: branch_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/pullrequest.PullRequestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Generate a pull request title and description
+      tags:
+      - pull-requests
   /changes/{change_id}:
     get:
       description: Returns a change with its analysis result.
